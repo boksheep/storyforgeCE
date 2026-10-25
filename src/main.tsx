@@ -51,11 +51,25 @@ function scheduleLogFlushInstall() {
       // 加载失败不阻断启动：事件仍在内存队列里，日志状态卡打开时会再次安装。
     })
 }
+
+/**
+ * 桌面版自动快照桥：主进程按周期 / 关窗前 / 系统注销时来要一份全项目 JSON。
+ * 动态 import 是为了不把导出器塞进首屏包；首次快照在 5 分钟后，来得及加载。
+ * 网页版没有 window.__sfBackup，模块内部直接 no-op。
+ */
+function scheduleDesktopBackupBridge() {
+  if (!window.__sfBackup) return
+  void import('./lib/desktop/backup-bridge')
+    .then(module => { module.installDesktopBackupBridge() })
+    .catch(() => { /* 快照是兜底能力，加载失败不阻断启动 */ })
+}
 if (typeof requestIdleCallback === 'function') {
   requestIdleCallback(scheduleLogFlushInstall, { timeout: 3_000 })
 } else {
   setTimeout(scheduleLogFlushInstall, 1_500)
 }
+
+scheduleDesktopBackupBridge()
 
 /**
  * FB-11 数据持久 · 启动期申请「持久化存储」。
