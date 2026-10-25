@@ -406,4 +406,11 @@ npm run ci                         # 以上 + tsc + build + 体积预算
 
 ## License
 
-StoryForge 使用 [MIT License](./LICENSE) 开源。你可以自由使用、复制、修改、分发和商用本项目代码；请保留原始版权与许可声明。
+本项目沿用上游 StoryForge 的 [MIT License](./LICENSE)：可以自由使用、复制、修改、分发和商用，包括闭源商用。
+
+按 MIT 的要求，分发时需保留版权与许可声明。本仓库的 `LICENSE` 同时列明两段版权：
+
+- `Copyright (c) 2026 yuanbw2025` —— 上游 StoryForge 原作者；
+- `Copyright (c) 2026 boksheep` —— StoryForge CE 分支的修改部分。
+
+如果你分发的是构建产物（网页包），除 `LICENSE` 外还要一并保留 [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) 与 [`third-party-licenses/`](./third-party-licenses)：地图识字功能随包分发了 Tesseract.js、tessdata_fast 等 Apache-2.0 组件，那份声明不能删。构建时 `scripts/prepare-map-ocr.mjs` 会自动把这两份文件复制到站点根目录。
