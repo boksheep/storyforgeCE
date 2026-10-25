@@ -1,0 +1,372 @@
+/**
+ * Voronoi 地图 AI 适配器
+ * AI 分析世界观设定 → 生成 MapGenConfig 参数（含地形模板 + 命名风格） → 引擎生成地图
+ */
+
+import type { ChatMessage, Location, Worldview } from '../../types'
+import type {
+  MapGenConfig,
+  HeightmapTemplate,
+  NamingStyle,
+  MapSpatialEntity,
+  MapSpatialRelation,
+  SpatialEntityKind,
+  SpatialScaleTier,
+  SpatialDirection,
+  SpatialDistanceTier,
+  SpatialDistanceUnit,
+} from '../../world-map/engine'
+
+/** 合法值白名单 */
+const VALID_TEMPLATES: HeightmapTemplate[] = [
+  'continents', 'pangea', 'archipelago', 'volcano', 'isthmus',
+  'peninsula', 'mediterranean', 'atoll', 'shattered', 'highland',
+]
+const VALID_NAMING: NamingStyle[] = [
+  'chinese', 'japanese', 'european', 'arabic', 'highFantasy', 'darkFantasy',
+]
+const VALID_ENTITY_KINDS: SpatialEntityKind[] = [
+  'state', 'settlement', 'fortress', 'mountain', 'river', 'region', 'landmark',
+]
+const VALID_SCALE_TIERS: SpatialScaleTier[] = [
+  'supercontinent', 'empire', 'kingdom', 'province', 'metropolis',
+  'city', 'town', 'village', 'fortress', 'landmark',
+]
+const VALID_DIRECTIONS: SpatialDirection[] = [
+  'north', 'north-east', 'east', 'south-east',
+  'south', 'south-west', 'west', 'north-west',
+]
+const VALID_DISTANCE_TIERS: SpatialDistanceTier[] = [
+  'adjacent', 'near', 'medium', 'far', 'very-far',
+]
+const VALID_DISTANCE_UNITS: SpatialDistanceUnit[] = ['km', 'li', 'day', 'month']
+
+/**
+ * 构建 AI prompt，让 AI 根据世界观描述输出 MapGenConfig
+ */
+export function buildVoronoiMapPrompt(
+  worldview: Partial<Worldview> | null,
+  overview: string,
+  locations: Location[],
+  /** 由 CONTEXT_SOURCES 装配的地理、词条、地点和已确认地图事实。 */
+  codexContext = '',
+): ChatMessage[] {
+  // 拼接世界观上下文 —— 读全用户已填的一切相关内容,一项不漏
+  const contextParts: string[] = []
+
+  if (worldview?.worldStructure)
+    contextParts.push(`【世界结构】${worldview.worldStructure}`)
+  if (worldview?.worldDimensions)
+    contextParts.push(`【世界尺寸/疆域】${worldview.worldDimensions}`)
+  if (worldview?.continentLayout)
+    contextParts.push(`【地貌/大陆分布】${worldview.continentLayout}`)
+  if (worldview?.mountainsRivers)
+    contextParts.push(`【山川水系】${worldview.mountainsRivers}`)
+  if (worldview?.climateByRegion)
+    contextParts.push(`【气候环境】${worldview.climateByRegion}`)
+  if (worldview?.naturalResourceOverview)
+    contextParts.push(`【自然资源】${worldview.naturalResourceOverview}`)
+  if (worldview?.factionLayout)
+    contextParts.push(`【势力分布】${worldview.factionLayout}`)
+  if (worldview?.regionDimensions)
+    contextParts.push(`【城池重镇】${worldview.regionDimensions}`)
+  if (worldview?.races)
+    contextParts.push(`【种族设定】${worldview.races}`)
+  if (worldview?.politicsOverview)
+    contextParts.push(`【政治制度】${worldview.politicsOverview}`)
+  if (worldview?.economyOverview)
+    contextParts.push(`【经济制度】${worldview.economyOverview}`)
+  if (worldview?.cultureOverview)
+    contextParts.push(`【文化制度】${worldview.cultureOverview}`)
+  if (!worldview?.politicsOverview && !worldview?.economyOverview && !worldview?.cultureOverview
+    && worldview?.politicsEconomyCulture)
+    contextParts.push(`【政治经济文化（旧版资料）】${worldview.politicsEconomyCulture}`)
+  if (overview)
+    contextParts.push(`【地理总述】${overview}`)
+  if (codexContext && codexContext.trim())
+    contextParts.push(`【已登记的地理与地图事实（仅按来源和已读范围采用）】\n${codexContext.trim()}`)
+
+  const locationList = locations.length > 0
+    ? locations
+        .map(l => `- ${l.name}（${l.type}）：${l.description || '无描述'}`)
+        .join('\n')
+    : ''
+
+  const worldContext = contextParts.length > 0
+    ? contextParts.join('\n')
+    : '（用户未填写世界观描述，请生成一个中文古风奇幻世界）'
+
+  const systemPrompt = `你是一位奇幻世界地图参数设计师。你需要根据用户的世界观文字描述，输出一组地图生成引擎的配置参数（JSON），引擎会用 Voronoi 细分算法自动生成完整的地形、河流、生态群落和城市。
+
+**你的任务**：
+分析用户的世界设定文字，将其转化为以下参数。你不需要指定具体的坐标或多边形——本地约束求解器会计算坐标，引擎会自动生成地形。你只需要控制宏观参数、命名和定性空间关系。
+
+**严格要求**：
+1. 返回**纯 JSON**，不要用 markdown 包裹，不要添加解释文字
+2. JSON 必须能被 JSON.parse() 直接解析
+
+**参数说明**：
+{
+  "seed": "随机种子字符串",
+  "mapName": "世界名称",
+  "pointCount": 10000,
+  "landRatio": 0.45,
+  "continentCount": 2,
+  "stateCount": 8,
+  "burgDensity": 0.5,
+  "temperatureShift": 0,
+  "precipitationFactor": 1.0,
+
+  "heightmapTemplate": "continents",
+  // 地形模板，从以下选一个：
+  // "continents"    — 多大陆（默认，多块独立大陆+海洋）
+  // "pangea"        — 盘古大陆（一整块超级大陆）
+  // "archipelago"   — 群岛（大量分散小岛）
+  // "volcano"       — 火山岛（中心高峰的单体岛屿）
+  // "isthmus"       — 地峡（两块大陆以窄桥相连）
+  // "peninsula"     — 半岛（从大陆延伸出的狭长半岛）
+  // "mediterranean" — 内海/地中海（大陆环绕中心海域）
+  // "atoll"         — 环礁（环状珊瑚岛链）
+  // "shattered"     — 碎裂大陆（原本一体后来碎裂）
+  // "highland"      — 高原（大面积平坦高地+边缘山脉）
+
+  "namingStyle": "chinese",
+  // 命名风格，从以下选一个：
+  // "chinese"     — 中文古风（修仙/武侠/东方奇幻）
+  // "japanese"    — 日式和风（和风/忍者/阴阳师）
+  // "european"    — 欧洲中世纪（骑士/城堡/剑与魔法）
+  // "arabic"      — 阿拉伯/沙漠（一千零一夜风格）
+  // "highFantasy" — 高魔奇幻（精灵/矮人/龙）
+  // "darkFantasy" — 暗黑奇幻（末世/亡灵/恐怖）
+
+  "stateNames": ["国家1", "国家2", ...],
+  "burgNames":  ["首都1", "首都2", ..., "城镇1", "城镇2", ...],
+  "riverNames": ["河流1", "河流2", ...],
+  "mapWidthKm": 3000,
+  "mapWidthEvidenceQuote": "东西横跨三千公里",
+  "spatialEntities": [
+    {
+      "name": "天南帝国",
+      "kind": "state",
+      "scaleTier": "empire",
+      "capitalName": "天南城",
+      "source": "explicit",
+      "evidenceQuote": "天南帝国以天南城为都"
+    },
+    {
+      "name": "落雁镇",
+      "kind": "settlement",
+      "scaleTier": "town",
+      "source": "explicit",
+      "evidenceQuote": "边陲·落雁镇"
+    },
+    {
+      "name": "天南城",
+      "kind": "settlement",
+      "scaleTier": "metropolis",
+      "source": "explicit",
+      "evidenceQuote": "天南城"
+    }
+  ],
+  "spatialRelations": [
+    {
+      "from": "落雁镇",
+      "to": "天南城",
+      "direction": "north-west",
+      "distanceTier": "far",
+      "distanceValue": 100,
+      "distanceUnit": "li",
+      "source": "explicit",
+      "evidenceQuote": "落雁镇在天南城西北百里"
+    }
+  ]
+}
+
+**空间约束枚举**：
+- kind 只能是 state / settlement / fortress / mountain / river / region / landmark
+- scaleTier 只能是 supercontinent / empire / kingdom / province / metropolis / city / town / village / fortress / landmark
+- direction 表示 from 位于 to 的哪个方向，只能是 north / north-east / east / south-east / south / south-west / west / north-west
+- distanceTier 只能是 adjacent / near / medium / far / very-far
+- distanceUnit 只能是 km（公里）/ li（里）/ day（日程）/ month（月程）
+
+**【铁律 · 必须尊重用户已设定的内容】**：
+- 用户在上文写明的**势力 / 国家名**，必须原样放进 stateNames；写明的**城池 / 重镇 / 重要地点名**（含「城池重镇」「已登记词条」「已设定地点」里的），必须原样放进 burgNames；写明的**山川 / 河流名**（含「山川水系」「词条」里的），必须原样放进 riverNames。**一个都不许漏、不许改名。**
+- **数量以用户为准**：用户写了几个势力，stateCount 就按几个（再适当±）；用户列了多少城池，burgNames 至少要含全这些。
+- 用户没给、但地图需要的元素（还缺多少城镇名、地形走向、温湿度档、大陆数等），你**在不与用户已给内容冲突的前提下合理补全**——这是补全，不是覆盖。
+- 用户明确写出的国家、聚落、要塞、山脉、河流、区域和地标放入 spatialEntities；明确写出的相对方位、远近或里程放入 spatialRelations。关系两端必须先出现在 spatialEntities 中。
+- source="explicit" 时 evidenceQuote 必须是下方用户资料里可以逐字搜索到的连续原文，不得改写、拼接或伪造；没有逐字证据就必须标记 source="inferred" 且不要伪造证据。
+- 用户明确提供世界/疆域横向尺寸时才输出 mapWidthKm，并同时给出逐字 mapWidthEvidenceQuote；不要把面积、人口或你的推测当成横向尺寸。
+- 不要输出 x/y、经纬度、数据库 ID 或多边形；不要为了凑关系而覆盖用户设定。冲突关系都保留给本地诊断。
+
+**参数设计指导**：
+- **遵循历史地理学 · 人地互动常识**：城镇 / 国家依水土而聚——大河流域、海岸、河口、绿洲、平原、交通要冲（渡口 / 关隘 / 港口 / 商路）与矿盐良田是人口与城池密集区；沙漠、极地、高山、密林地广人稀。据此推断：① burgDensity（水土丰美的世界设高，荒漠极地世界设低）；② stateCount 与国界——大山脉 / 宽河 / 沙海是天然疆界，国家依地形分块而非均分；③ 生态配色随气候带。整体让"哪里该有城、哪里该荒、国界沿何处"符合地理逻辑，避免把城镇均匀撒满或撒进不毛之地。
+- 根据世界观风格选择 heightmapTemplate：比如"诸岛"用 archipelago，"一块大陆"用 pangea，"高原"用 highland
+- 根据世界观文化氛围选择 namingStyle：中式修仙/武侠 → chinese；和风 → japanese；西方奇幻 → european 或 highFantasy
+- 如果世界观提到"北方寒冷"，设 temperatureShift 为负值；"干旱沙漠"，设 precipitationFactor < 0.6；"群岛"，设 landRatio=0.25-0.35 + heightmapTemplate="archipelago"
+- burgNames 的前 stateCount 个会作为首都名，之后的作为普通城镇名；burgNames 长度至少为 stateCount 的 2-3 倍
+- 补全的名字（用户没给的）必须符合所选 namingStyle 风格`
+
+  const userPrompt = `请根据以下世界观描述，设计地图生成参数 JSON：
+
+${worldContext}
+${locationList ? `\n已设定的地点：\n${locationList}` : ''}
+
+请输出纯 JSON 格式的地图参数。`
+
+  return [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ]
+}
+
+/**
+ * 解析 AI 返回的 JSON 为 MapGenConfig
+ */
+export function parseVoronoiMapConfig(raw: string, sourceText = ''): MapGenConfig {
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*\n?/i, '')
+    .replace(/\n?\s*```\s*$/i, '')
+    .trim()
+
+  const parsed = JSON.parse(cleaned)
+
+  const config: MapGenConfig = {
+    width: 1200,
+    height: 800,
+    seed: String(parsed.seed || Math.floor(Math.random() * 1e10)),
+    mapName: parsed.mapName || 'Fantasy World',
+    pointCount: clamp(parsed.pointCount || 10000, 5000, 20000),
+    landRatio: clamp(parsed.landRatio || 0.45, 0.15, 0.8),
+    continentCount: clamp(parsed.continentCount || 2, 1, 5),
+    stateCount: clamp(parsed.stateCount || 8, 2, 15),
+    burgDensity: clamp(parsed.burgDensity || 0.5, 0.1, 1.5),
+    temperatureShift: clamp(parsed.temperatureShift || 0, -20, 20),
+    precipitationFactor: clamp(parsed.precipitationFactor || 1.0, 0.2, 3.0),
+  }
+
+  // 地形模板
+  if (parsed.heightmapTemplate && VALID_TEMPLATES.includes(parsed.heightmapTemplate)) {
+    config.heightmapTemplate = parsed.heightmapTemplate
+  }
+
+  // 命名风格
+  if (parsed.namingStyle && VALID_NAMING.includes(parsed.namingStyle)) {
+    config.namingStyle = parsed.namingStyle
+  }
+
+  // 名称列表
+  if (Array.isArray(parsed.stateNames) && parsed.stateNames.length > 0) {
+    config.stateNames = parsed.stateNames.map(String)
+  }
+  if (Array.isArray(parsed.burgNames) && parsed.burgNames.length > 0) {
+    config.burgNames = parsed.burgNames.map(String)
+  }
+  if (Array.isArray(parsed.riverNames) && parsed.riverNames.length > 0) {
+    config.riverNames = parsed.riverNames.map(String)
+  }
+
+  const spatialEntities = normalizeSpatialEntities(parsed.spatialEntities, sourceText)
+  if (spatialEntities.length > 0) {
+    config.spatialEntities = spatialEntities
+    const entityNames = new Set(spatialEntities.map(entity => entity.name))
+    const spatialRelations = normalizeSpatialRelations(parsed.spatialRelations, entityNames, sourceText)
+    if (spatialRelations.length > 0) config.spatialRelations = spatialRelations
+  }
+
+  const widthEvidence = cleanEvidence(parsed.mapWidthEvidenceQuote)
+  const mapWidthKm = toPositiveNumber(parsed.mapWidthKm)
+  if (mapWidthKm && widthEvidence && hasExactEvidence(sourceText, widthEvidence)) {
+    config.mapWidthKm = clamp(mapWidthKm, 1, 1_000_000)
+    config.mapWidthEvidenceQuote = widthEvidence
+  }
+
+  return config
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v))
+}
+
+function normalizeSpatialEntities(value: unknown, sourceText: string): MapSpatialEntity[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  return value.flatMap(item => {
+    if (!isRecord(item)) return []
+    const name = cleanName(item.name)
+    if (!name || seen.has(name) || !isAllowed(item.kind, VALID_ENTITY_KINDS)) return []
+    const evidenceQuote = cleanEvidence(item.evidenceQuote)
+    const explicit = item.source === 'explicit' && !!evidenceQuote && hasExactEvidence(sourceText, evidenceQuote)
+    const entity: MapSpatialEntity = {
+      name,
+      kind: item.kind,
+      source: explicit ? 'explicit' : 'inferred',
+    }
+    if (isAllowed(item.scaleTier, VALID_SCALE_TIERS)) entity.scaleTier = item.scaleTier
+    const capitalName = cleanName(item.capitalName)
+    if (item.kind === 'state' && capitalName) entity.capitalName = capitalName
+    if (explicit) entity.evidenceQuote = evidenceQuote
+    seen.add(name)
+    return [entity]
+  }).slice(0, 120)
+}
+
+function normalizeSpatialRelations(
+  value: unknown,
+  entityNames: Set<string>,
+  sourceText: string,
+): MapSpatialRelation[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(item => {
+    if (!isRecord(item)) return []
+    const from = cleanName(item.from)
+    const to = cleanName(item.to)
+    if (!from || !to || from === to || !entityNames.has(from) || !entityNames.has(to)) return []
+    const direction = isAllowed(item.direction, VALID_DIRECTIONS) ? item.direction : undefined
+    const distanceTier = isAllowed(item.distanceTier, VALID_DISTANCE_TIERS) ? item.distanceTier : undefined
+    const distanceUnit = isAllowed(item.distanceUnit, VALID_DISTANCE_UNITS) ? item.distanceUnit : undefined
+    const rawDistance = toPositiveNumber(item.distanceValue)
+    const distanceValue = distanceUnit && rawDistance ? clamp(rawDistance, 0.001, 10_000_000) : undefined
+    if (!direction && !distanceTier && !distanceValue) return []
+
+    const evidenceQuote = cleanEvidence(item.evidenceQuote)
+    const explicit = item.source === 'explicit' && !!evidenceQuote && hasExactEvidence(sourceText, evidenceQuote)
+    const relation: MapSpatialRelation = {
+      from,
+      to,
+      source: explicit ? 'explicit' : 'inferred',
+    }
+    if (direction) relation.direction = direction
+    if (distanceTier) relation.distanceTier = distanceTier
+    if (distanceValue && distanceUnit) {
+      relation.distanceValue = distanceValue
+      relation.distanceUnit = distanceUnit
+    }
+    if (explicit) relation.evidenceQuote = evidenceQuote
+    return [relation]
+  }).slice(0, 240)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isAllowed<T extends string>(value: unknown, allowed: readonly T[]): value is T {
+  return typeof value === 'string' && allowed.includes(value as T)
+}
+
+function cleanName(value: unknown): string {
+  return typeof value === 'string' ? value.trim().slice(0, 100) : ''
+}
+
+function cleanEvidence(value: unknown): string {
+  return typeof value === 'string' ? value.trim().slice(0, 300) : ''
+}
+
+function hasExactEvidence(sourceText: string, quote: string): boolean {
+  return quote.length >= 2 && sourceText.includes(quote)
+}
+
+function toPositiveNumber(value: unknown): number | undefined {
+  const number = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(number) && number > 0 ? number : undefined
+}

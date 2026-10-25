@@ -1,0 +1,976 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   StoryForge · Design Tokens v3
+   七主题：暖白编辑室(warm) / GitHub 黑蓝白(github) / 墨玉青(jade) / 冷灰银蓝(slate)
+          熔炉(forge) / 古卷(scroll) / 纸与墨(paper)
+   ============================================================ */
+
+/* ---------- 全局不变量 ---------- */
+:root {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-serif: "Source Serif 4", "Songti SC", "Noto Serif CJK SC", Georgia, serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ============================================================
+   暖白编辑室 · Warm Studio — 长时间写作默认主题
+   ============================================================ */
+:root,
+[data-theme="warm"] {
+  --bg-base: #F4EFE7;
+  --bg-surface: #E9E0D4;
+  --bg-elevated: #FFFDF8;
+  --bg-hover: rgba(54, 45, 36, 0.05);
+
+  --text-primary: #2B2620;
+  --text-secondary: #6A5B4B;
+  --text-muted: #9A8A78;
+
+  --accent: #965A3A;
+  --accent-hover: #85492F;
+  --accent-muted: #D3A47C;
+
+  --success: #15803D;
+  --warning: #B45309;
+  --error: #B91C1C;
+  --info: #1D4ED8;
+
+  --border: rgba(54, 45, 36, 0.14);
+  --border-hover: rgba(54, 45, 36, 0.26);
+
+  --accent-soft: rgba(150, 90, 58, 0.12);
+  --border-subtle: rgba(54, 45, 36, 0.07);
+  --shadow-sm: 0 1px 3px rgba(54, 45, 36, 0.08);
+  --shadow-md: 0 6px 18px rgba(54, 45, 36, 0.10);
+  --shadow-lg: 0 16px 44px rgba(54, 45, 36, 0.14);
+
+  --editor-page-bg: #FFFDF8;
+  --editor-ruled-line: rgba(54, 45, 36, 0.08);
+  --editor-selection-bg: rgba(166, 106, 74, 0.22);
+  --editor-selection-text: #1E1711;
+
+  --editor-ink-primary: #2B2620;
+  --editor-ink-strong: #100D0A;
+  --editor-ink-cream: #6E421F;
+  --editor-ink-muted: #725A32;
+  --editor-ink-gold: #8A5B00;
+  --editor-ink-orange: #B54708;
+  --editor-ink-red: #B91C1C;
+  --editor-ink-blue: #1D4ED8;
+  --editor-ink-green: #15803D;
+  --editor-ink-purple: #7E22CE;
+
+  --editor-mark-yellow: #FFE45C;
+  --editor-mark-red: #FFD6D6;
+  --editor-mark-blue: #D7E8FF;
+  --editor-mark-green: #D8F5DF;
+  --editor-mark-purple: #EAD7FF;
+  --editor-mark-brown: #F1E3CD;
+  --editor-mark-ink: #E9DAC3;
+}
+
+/* ============================================================
+   GitHub 黑蓝白 · GitHub Dark — 深色工作台 + 蓝色操作色
+   ============================================================ */
+[data-theme="github"] {
+  color-scheme: dark;
+  --bg-base: #0D1117;
+  --bg-surface: #161B22;
+  --bg-elevated: #21262D;
+  --bg-hover: rgba(88, 166, 255, 0.12);
+
+  --text-primary: #F0F6FC;
+  --text-secondary: #C9D1D9;
+  --text-muted: #8B949E;
+
+  --accent: #58A6FF;
+  --accent-hover: #79C0FF;
+  --accent-muted: #388BFD;
+
+  --success: #3FB950;
+  --warning: #D29922;
+  --error: #F85149;
+  --info: #58A6FF;
+
+  --border: #30363D;
+  --border-hover: #8B949E;
+
+  --accent-soft: rgba(56, 139, 253, 0.16);
+  --border-subtle: rgba(240, 246, 252, 0.10);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 16px 44px rgba(0, 0, 0, 0.48);
+
+  --editor-page-bg: #161B22;
+  --editor-ruled-line: rgba(139, 148, 158, 0.16);
+  --editor-selection-bg: rgba(56, 139, 253, 0.32);
+  --editor-selection-text: #FFFFFF;
+
+  --editor-ink-primary: #F0F6FC;
+  --editor-ink-strong: #FFFFFF;
+  --editor-ink-cream: #F0F6FC;
+  --editor-ink-muted: #C9D1D9;
+  --editor-ink-gold: #E3B341;
+  --editor-ink-orange: #FFA657;
+  --editor-ink-red: #FF7B72;
+  --editor-ink-blue: #79C0FF;
+  --editor-ink-green: #56D364;
+  --editor-ink-purple: #D2A8FF;
+
+  --editor-mark-yellow: #634D1D;
+  --editor-mark-red: #592B2B;
+  --editor-mark-blue: #1F3B5C;
+  --editor-mark-green: #1D4B2A;
+  --editor-mark-purple: #3E2A5C;
+  --editor-mark-brown: #4A3522;
+  --editor-mark-ink: #30363D;
+}
+
+/* ============================================================
+   墨玉青 · Jade Ink — 深色外壳 + 白纸正文
+   ============================================================ */
+[data-theme="jade"] {
+  --bg-base: #101A17;
+  --bg-surface: #16231F;
+  --bg-elevated: #20342E;
+  --bg-hover: rgba(101, 191, 168, 0.08);
+
+  --text-primary: #ECF4EE;
+  --text-secondary: #B1C8BD;
+  --text-muted: #6F8C80;
+
+  --accent: #65BFA8;
+  --accent-hover: #7DD3BF;
+  --accent-muted: #3B8C78;
+
+  --success: #6EE7B7;
+  --warning: #F6C77A;
+  --error: #FCA5A5;
+  --info: #93C5FD;
+
+  --border: rgba(163, 205, 189, 0.18);
+  --border-hover: rgba(163, 205, 189, 0.34);
+
+  --accent-soft: rgba(101, 191, 168, 0.16);
+  --border-subtle: rgba(163, 205, 189, 0.10);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 20px 64px rgba(0, 0, 0, 0.40);
+
+  --editor-page-bg: #F7F1E5;
+  --editor-ruled-line: rgba(30, 43, 37, 0.08);
+  --editor-selection-bg: rgba(77, 148, 130, 0.22);
+  --editor-selection-text: #15221E;
+
+  --editor-ink-primary: #1F2A25;
+  --editor-ink-strong: #0C1411;
+  --editor-ink-cream: #6E421F;
+  --editor-ink-muted: #6C5A35;
+  --editor-ink-gold: #8A5B00;
+  --editor-ink-orange: #B54708;
+  --editor-ink-red: #B91C1C;
+  --editor-ink-blue: #1D4ED8;
+  --editor-ink-green: #047857;
+  --editor-ink-purple: #7E22CE;
+
+  --editor-mark-yellow: #FFE45C;
+  --editor-mark-red: #FFD6D6;
+  --editor-mark-blue: #D7E8FF;
+  --editor-mark-green: #D8F5DF;
+  --editor-mark-purple: #EAD7FF;
+  --editor-mark-brown: #ECE0C7;
+  --editor-mark-ink: #D8C8A8;
+}
+
+/* ============================================================
+   冷灰银蓝 · Slate — 设定库 / 事实库 / 管理页生产力主题
+   ============================================================ */
+[data-theme="slate"] {
+  --bg-base: #EEF2F6;
+  --bg-surface: #E3EAF1;
+  --bg-elevated: #F8FAFC;
+  --bg-hover: rgba(23, 32, 51, 0.05);
+
+  --text-primary: #172033;
+  --text-secondary: #4B5B70;
+  --text-muted: #7A8796;
+
+  --accent: #3F6F96;
+  --accent-hover: #335D80;
+  --accent-muted: #8AA8C0;
+
+  --success: #047857;
+  --warning: #A16207;
+  --error: #B91C1C;
+  --info: #1D4ED8;
+
+  --border: rgba(23, 32, 51, 0.13);
+  --border-hover: rgba(23, 32, 51, 0.25);
+
+  --accent-soft: rgba(63, 111, 150, 0.12);
+  --border-subtle: rgba(23, 32, 51, 0.07);
+  --shadow-sm: 0 1px 3px rgba(23, 32, 51, 0.08);
+  --shadow-md: 0 6px 18px rgba(23, 32, 51, 0.10);
+  --shadow-lg: 0 16px 44px rgba(23, 32, 51, 0.13);
+
+  --editor-page-bg: #FFFFFF;
+  --editor-ruled-line: rgba(23, 32, 51, 0.07);
+  --editor-selection-bg: rgba(63, 111, 150, 0.22);
+  --editor-selection-text: #111827;
+
+  --editor-ink-primary: #172033;
+  --editor-ink-strong: #070B12;
+  --editor-ink-cream: #704214;
+  --editor-ink-muted: #5B5A36;
+  --editor-ink-gold: #8A5B00;
+  --editor-ink-orange: #B54708;
+  --editor-ink-red: #B91C1C;
+  --editor-ink-blue: #1D4ED8;
+  --editor-ink-green: #047857;
+  --editor-ink-purple: #7E22CE;
+
+  --editor-mark-yellow: #FFE45C;
+  --editor-mark-red: #FFD6D6;
+  --editor-mark-blue: #D7E8FF;
+  --editor-mark-green: #D8F5DF;
+  --editor-mark-purple: #EAD7FF;
+  --editor-mark-brown: #E8DED1;
+  --editor-mark-ink: #DDE5EE;
+}
+
+/* ============================================================
+   熔炉 · Forge — 暗夜琥珀，火光余烬
+   ============================================================ */
+[data-theme="forge"] {
+  --bg-base: #1A0F0A;
+  --bg-surface: #251810;
+  --bg-elevated: #30201A;
+  --bg-hover: rgba(217, 119, 87, 0.08);
+
+  --text-primary: #F5E6D3;
+  --text-secondary: #B89A7A;
+  --text-muted: #6F5A45;
+
+  --accent: #D97757;
+  --accent-hover: #E8906D;
+  --accent-muted: #B85C3F;
+
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --error: #EF4444;
+  --info: #60A5FA;
+
+  --border: rgba(200, 161, 85, 0.22);
+  --border-hover: rgba(200, 161, 85, 0.40);
+
+  --accent-soft: rgba(217, 119, 87, 0.18);
+  --border-subtle: rgba(200, 161, 85, 0.12);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 24px rgba(139, 62, 31, 0.35);
+  --shadow-lg: 0 16px 64px rgba(139, 62, 31, 0.5);
+
+  --editor-page-bg: #2A1A12;
+  --editor-ruled-line: rgba(200, 161, 85, 0.13);
+  --editor-selection-bg: rgba(217, 119, 87, 0.34);
+  --editor-selection-text: #FFF7ED;
+
+  --editor-ink-primary: #F5E6D3;
+  --editor-ink-strong: #FFFFFF;
+  --editor-ink-cream: #F5E6D3;
+  --editor-ink-muted: #D6B98C;
+  --editor-ink-gold: #FACC15;
+  --editor-ink-orange: #FB923C;
+  --editor-ink-red: #F87171;
+  --editor-ink-blue: #93C5FD;
+  --editor-ink-green: #86EFAC;
+  --editor-ink-purple: #C4B5FD;
+
+  --editor-mark-yellow: #6B4E10;
+  --editor-mark-red: #5A1F1F;
+  --editor-mark-blue: #1E3A5F;
+  --editor-mark-green: #14532D;
+  --editor-mark-purple: #3B2A63;
+  --editor-mark-brown: #4A3326;
+  --editor-mark-ink: #3A2418;
+}
+
+/* ============================================================
+   古卷 · Scroll — 旧纸染黄，铁胆墨香
+   ============================================================ */
+[data-theme="scroll"] {
+  --bg-base: #E5D5A8;
+  --bg-surface: #EDE0BC;
+  --bg-elevated: #F5EDD4;
+  --bg-hover: rgba(60, 38, 10, 0.05);
+
+  --text-primary: #1E1208;
+  --text-secondary: #5C4420;
+  --text-muted: #9A7A48;
+
+  --accent: #7B3A1A;
+  --accent-hover: #6A3015;
+  --accent-muted: #B8845A;
+
+  --success: #4A7A3A;
+  --warning: #B87800;
+  --error: #B83030;
+  --info: #3A5A8A;
+
+  --border: rgba(60, 38, 10, 0.16);
+  --border-hover: rgba(60, 38, 10, 0.28);
+
+  --accent-soft: rgba(123, 58, 26, 0.12);
+  --border-subtle: rgba(60, 38, 10, 0.08);
+  --shadow-sm: 0 1px 3px rgba(60, 38, 10, 0.10);
+  --shadow-md: 0 4px 16px rgba(60, 38, 10, 0.12);
+  --shadow-lg: 0 8px 32px rgba(60, 38, 10, 0.15);
+
+  --editor-page-bg: #F8EFD2;
+  --editor-ruled-line: rgba(60, 38, 10, 0.10);
+  --editor-selection-bg: rgba(123, 58, 26, 0.28);
+  --editor-selection-text: #1E1208;
+
+  --editor-ink-primary: #1E1208;
+  --editor-ink-strong: #090604;
+  --editor-ink-cream: #6A3D12;
+  --editor-ink-muted: #775A24;
+  --editor-ink-gold: #8A5B00;
+  --editor-ink-orange: #A94716;
+  --editor-ink-red: #A11E1E;
+  --editor-ink-blue: #184B8A;
+  --editor-ink-green: #1C6B35;
+  --editor-ink-purple: #6B3FA0;
+
+  --editor-mark-yellow: #FFE36A;
+  --editor-mark-red: #FFD2CC;
+  --editor-mark-blue: #CFE4FF;
+  --editor-mark-green: #CFEFD9;
+  --editor-mark-purple: #E6D8FF;
+  --editor-mark-brown: #E8DAB0;
+  --editor-mark-ink: #D8BE7A;
+}
+
+/* ============================================================
+   纸与墨 · Paper & Ink — 素纸如雪，墨迹清朗
+   ============================================================ */
+[data-theme="paper"] {
+  --bg-base: #FAF7F0;
+  --bg-surface: #F5F1E8;
+  --bg-elevated: #FFFFFF;
+  --bg-hover: rgba(31, 27, 22, 0.04);
+
+  --text-primary: #1F1B16;
+  --text-secondary: #56503F;
+  --text-muted: #8A7E6A;
+
+  --accent: #A04E35;
+  --accent-hover: #8E442E;
+  --accent-muted: #D6A86C;
+
+  --success: #16A34A;
+  --warning: #D97706;
+  --error: #DC2626;
+  --info: #2563EB;
+
+  --border: rgba(31, 27, 22, 0.12);
+  --border-hover: rgba(31, 27, 22, 0.22);
+
+  --accent-soft: rgba(184, 92, 63, 0.10);
+  --border-subtle: rgba(31, 27, 22, 0.06);
+  --shadow-sm: 0 1px 2px rgba(31, 27, 22, 0.04);
+  --shadow-md: 0 4px 12px rgba(31, 27, 22, 0.08);
+  --shadow-lg: 0 12px 40px rgba(31, 27, 22, 0.10);
+
+  --editor-page-bg: #FFFDF7;
+  --editor-ruled-line: rgba(31, 27, 22, 0.08);
+  --editor-selection-bg: rgba(37, 99, 235, 0.20);
+  --editor-selection-text: #111827;
+
+  --editor-ink-primary: #1F1B16;
+  --editor-ink-strong: #050505;
+  --editor-ink-cream: #7A4A1F;
+  --editor-ink-muted: #725A32;
+  --editor-ink-gold: #8A5B00;
+  --editor-ink-orange: #B54708;
+  --editor-ink-red: #B91C1C;
+  --editor-ink-blue: #1D4ED8;
+  --editor-ink-green: #15803D;
+  --editor-ink-purple: #7E22CE;
+
+  --editor-mark-yellow: #FFE45C;
+  --editor-mark-red: #FFD6D6;
+  --editor-mark-blue: #D7E8FF;
+  --editor-mark-green: #D8F5DF;
+  --editor-mark-purple: #EAD7FF;
+  --editor-mark-brown: #F1E7D4;
+  --editor-mark-ink: #E9DEC8;
+}
+
+/* ============================================================
+   兼容旧主题名
+   ============================================================ */
+[data-theme="midnight"],
+[data-theme="work"] {
+  --bg-base: #1A0F0A; --bg-surface: #251810; --bg-elevated: #30201A;
+  --bg-hover: rgba(217,119,87,0.08);
+  --text-primary: #F5E6D3; --text-secondary: #B89A7A; --text-muted: #6F5A45;
+  --accent: #D97757; --accent-hover: #E8906D; --accent-muted: #B85C3F;
+  --success: #4ADE80; --warning: #FBBF24; --error: #EF4444; --info: #60A5FA;
+  --border: rgba(200,161,85,0.22); --border-hover: rgba(200,161,85,0.40);
+  --accent-soft: rgba(217,119,87,0.18); --border-subtle: rgba(200,161,85,0.12);
+  --editor-page-bg: #2A1A12; --editor-ruled-line: rgba(200,161,85,0.13);
+  --editor-selection-bg: rgba(217,119,87,0.34); --editor-selection-text: #FFF7ED;
+  --editor-ink-primary: #F5E6D3; --editor-ink-strong: #FFFFFF; --editor-ink-cream: #F5E6D3; --editor-ink-muted: #D6B98C;
+  --editor-ink-gold: #FACC15; --editor-ink-orange: #FB923C; --editor-ink-red: #F87171; --editor-ink-blue: #93C5FD; --editor-ink-green: #86EFAC; --editor-ink-purple: #C4B5FD;
+  --editor-mark-yellow: #6B4E10; --editor-mark-red: #5A1F1F; --editor-mark-blue: #1E3A5F; --editor-mark-green: #14532D; --editor-mark-purple: #3B2A63; --editor-mark-brown: #4A3326; --editor-mark-ink: #3A2418;
+}
+
+[data-theme="ocean"],
+[data-theme="graphite"] {
+  --bg-base: #1A0F0A; --bg-surface: #251810; --bg-elevated: #30201A;
+  --bg-hover: rgba(217,119,87,0.08);
+  --text-primary: #F5E6D3; --text-secondary: #B89A7A; --text-muted: #6F5A45;
+  --accent: #D97757; --accent-hover: #E8906D; --accent-muted: #B85C3F;
+  --success: #4ADE80; --warning: #FBBF24; --error: #EF4444; --info: #60A5FA;
+  --border: rgba(200,161,85,0.22); --border-hover: rgba(200,161,85,0.40);
+  --accent-soft: rgba(217,119,87,0.18);
+  --editor-page-bg: #2A1A12; --editor-ruled-line: rgba(200,161,85,0.13);
+  --editor-selection-bg: rgba(217,119,87,0.34); --editor-selection-text: #FFF7ED;
+  --editor-ink-primary: #F5E6D3; --editor-ink-strong: #FFFFFF; --editor-ink-cream: #F5E6D3; --editor-ink-muted: #D6B98C;
+  --editor-ink-gold: #FACC15; --editor-ink-orange: #FB923C; --editor-ink-red: #F87171; --editor-ink-blue: #93C5FD; --editor-ink-green: #86EFAC; --editor-ink-purple: #C4B5FD;
+  --editor-mark-yellow: #6B4E10; --editor-mark-red: #5A1F1F; --editor-mark-blue: #1E3A5F; --editor-mark-green: #14532D; --editor-mark-purple: #3B2A63; --editor-mark-brown: #4A3326; --editor-mark-ink: #3A2418;
+}
+
+[data-theme="mist"],
+[data-theme="parchment"] {
+  --bg-base: #FAF7F0; --bg-surface: #F5F1E8; --bg-elevated: #FFFFFF;
+  --bg-hover: rgba(31,27,22,0.04);
+  --text-primary: #1F1B16; --text-secondary: #56503F; --text-muted: #8A7E6A;
+  --accent: #A04E35; --accent-hover: #8E442E; --accent-muted: #D6A86C;
+  --success: #16A34A; --warning: #D97706; --error: #DC2626; --info: #2563EB;
+  --border: rgba(31,27,22,0.12); --border-hover: rgba(31,27,22,0.22);
+  --accent-soft: rgba(184,92,63,0.10);
+  --editor-page-bg: #FFFDF7; --editor-ruled-line: rgba(31,27,22,0.08);
+  --editor-selection-bg: rgba(37,99,235,0.20); --editor-selection-text: #111827;
+  --editor-ink-primary: #1F1B16; --editor-ink-strong: #050505; --editor-ink-cream: #7A4A1F; --editor-ink-muted: #725A32;
+  --editor-ink-gold: #8A5B00; --editor-ink-orange: #B54708; --editor-ink-red: #B91C1C; --editor-ink-blue: #1D4ED8; --editor-ink-green: #15803D; --editor-ink-purple: #7E22CE;
+  --editor-mark-yellow: #FFE45C; --editor-mark-red: #FFD6D6; --editor-mark-blue: #D7E8FF; --editor-mark-green: #D8F5DF; --editor-mark-purple: #EAD7FF; --editor-mark-brown: #F1E7D4; --editor-mark-ink: #E9DEC8;
+}
+
+/* ============================================================
+   按钮状态令牌 · Button State Tokens
+   ────────────────────────────────────────────────────────────
+   项目内所有"可触及按钮"的五态只在这里定义一次：
+
+     default  → 按钮自身的静态外观（各组件/工具类决定）
+     hover    → --btn-hover-alpha 叠加层
+     pressed  → --btn-press-alpha 叠加层（按下未抬起）
+     loading  → --btn-loading-opacity + Spinner + aria-busy
+     disabled → --btn-disabled-opacity + not-allowed
+
+   为什么用「叠加层」而不是逐态配色：按钮底色来自 7 套主题的任意
+   组合（--accent / --bg-elevated / 半透明色 …），逐态写死颜色必然
+   漏掉组合。叠加层是一层可过渡的 inset 阴影，画在按钮底色之上、
+   文字之下，因此对任意底色、任意主题都成立，也不改变布局。
+
+   为什么 hover/pressed 不用 filter：filter 会让元素成为 fixed/absolute
+   后代的包含块；按钮里嵌套弹层时会导致定位漂移。inset 阴影没有这个副作用。
+   ============================================================ */
+:root {
+  /* ── 动效 ── */
+  --btn-duration: 140ms;
+  --btn-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── hover / pressed 叠加层（rgb 三元组 + 各态透明度）── */
+  --btn-overlay-rgb: 0 0 0;
+  --btn-hover-alpha: 0.055;
+  --btn-press-alpha: 0.11;
+
+  /* ── disabled / loading 不透明度 ── */
+  --btn-disabled-opacity: 0.45;
+  --btn-loading-opacity: 0.82;
+
+  /* ── focus-visible 焦点环 ── */
+  --btn-focus-ring: var(--accent);
+  --btn-focus-ring-width: 2px;
+  --btn-focus-ring-offset: 2px;
+}
+
+/* 深色主题：叠加层改为提亮，透明度加大（深色底上"变暗"几乎不可见） */
+:is([data-theme="github"], [data-theme="jade"], [data-theme="forge"],
+    [data-theme="midnight"], [data-theme="work"],
+    [data-theme="ocean"], [data-theme="graphite"]) {
+  --btn-overlay-rgb: 255 255 255;
+  --btn-hover-alpha: 0.085;
+  --btn-press-alpha: 0.17;
+}
+
+/* 浅色主题：显式声明，新增主题若忘记登记也会落到 :root 的浅色默认 */
+:is([data-theme="warm"], [data-theme="slate"], [data-theme="scroll"],
+    [data-theme="paper"], [data-theme="mist"], [data-theme="parchment"]) {
+  --btn-overlay-rgb: 0 0 0;
+  --btn-hover-alpha: 0.055;
+  --btn-press-alpha: 0.11;
+}
+
+/* ============================================================
+   全局按钮状态层
+   ────────────────────────────────────────────────────────────
+   有了这一层，项目内任意 <button>（含尚未迁移到 Button 组件的历史按钮）
+   都自动获得一致的五态反馈，这是"改一处，所有按钮受益"的兜底。
+   <Button> 组件只负责决定 default 态（variant/size），不重复写状态。
+   ============================================================ */
+@layer base {
+  /* default 态：统一过渡曲线与指针语义 */
+  button {
+    transition:
+      background-color var(--btn-duration) var(--btn-ease),
+      border-color var(--btn-duration) var(--btn-ease),
+      color var(--btn-duration) var(--btn-ease),
+      box-shadow var(--btn-duration) var(--btn-ease),
+      opacity var(--btn-duration) var(--btn-ease);
+  }
+
+  button:not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  /* hover 态 */
+  button:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):hover {
+    box-shadow: inset 0 0 0 999px rgb(var(--btn-overlay-rgb) / var(--btn-hover-alpha));
+  }
+
+  /* pressed 态（按下未抬起）—— 必须排在 hover 之后，否则被 hover 覆盖 */
+  button:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):active {
+    box-shadow: inset 0 0 0 999px rgb(var(--btn-overlay-rgb) / var(--btn-press-alpha));
+  }
+
+  /* focus 态：仅键盘可达时出现；!important 用于压过历史遗留的 focus:outline-none */
+  button:focus-visible {
+    outline: var(--btn-focus-ring-width) solid var(--btn-focus-ring) !important;
+    outline-offset: var(--btn-focus-ring-offset);
+  }
+
+  /* disabled 态：统一到一个不透明度，压过各处的 disabled:opacity-30/40/50/60 */
+  button:disabled,
+  button[aria-disabled="true"] {
+    opacity: var(--btn-disabled-opacity) !important;
+    cursor: not-allowed;
+  }
+
+  /* loading 态：由 Button 组件写 aria-busy；必须从 disabled 的淡化里豁免，
+     否则"加载中"和"不可用"看起来一样，用户无法区分这两个状态 */
+  button[aria-busy="true"] {
+    opacity: var(--btn-loading-opacity) !important;
+    cursor: progress;
+  }
+
+  button[aria-busy="true"] > * {
+    pointer-events: none;
+  }
+}
+
+/* ========================================
+   全局基础样式
+   ======================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* 选中文字颜色 */
+::selection {
+  background: var(--editor-selection-bg);
+  color: var(--editor-selection-text);
+}
+
+/* ── 衬线正文（章节内容区）───────────────────────── */
+.sf-prose {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 2.05;
+  color: var(--text-primary);
+}
+.sf-prose p {
+  margin: 0 0 1.3em;
+  text-indent: 2em;
+}
+
+/* ── 正文写作稿纸：降低控件感，突出文章层级 ───────────── */
+.sf-manuscript-editor {
+  box-shadow: none;
+}
+
+.sf-manuscript-editor > div:first-child {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-surface) 86%, transparent);
+  margin-bottom: 24px;
+}
+
+.sf-manuscript-editor > div:last-child {
+  background-color: var(--editor-page-bg);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 39px,
+    var(--editor-ruled-line) 40px
+  );
+}
+
+.sf-manuscript-editor .tiptap-editor {
+  /* 用户排版偏好(全局持久)优先,留空则用内置默认。默认字号从 18 调小到 16。 */
+  font-family: var(--editor-user-font-family, var(--font-serif));
+  font-size: var(--editor-user-font-size, 16px);
+  line-height: var(--editor-user-line-height, 2.2);
+  letter-spacing: 0.01em;
+  padding: 4px 10px 28px;
+  color: var(--editor-ink-primary);
+}
+
+.sf-manuscript-editor .tiptap-editor p {
+  margin: 0 0 var(--editor-user-paragraph-spacing, 1.15em);
+  text-indent: 2em;
+}
+
+/* ── 稿纸横线背景 ─────────────────────────────────── */
+.sf-ruled {
+  background-image: repeating-linear-gradient(
+    0deg, transparent 0, transparent 31px, rgba(31,27,22,0.04) 32px
+  );
+}
+
+/* ── AI 协作块 ──────────────────────────────────────── */
+.sf-ai-block {
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 14px 18px;
+  border-radius: 0 6px 6px 0;
+}
+
+/* ── 金色细分隔线 ──────────────────────────────────── */
+.sf-rule {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+  opacity: 0.5;
+}
+
+/* ── 小眉标文字 ───────────────────────────────────── */
+.sec-eye {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ========================================
+   ✍️ TipTap 富文本编辑器样式
+   ======================================== */
+.tiptap-editor {
+  min-height: 100%;
+  outline: none;
+}
+
+.tiptap-editor ::selection {
+  background: var(--editor-selection-bg);
+  color: var(--editor-selection-text);
+}
+
+.tiptap-editor .sf-entity-ref {
+  border-bottom: 1px dotted color-mix(in srgb, var(--accent) 65%, transparent);
+  cursor: help;
+  text-decoration: none;
+}
+
+.tiptap-editor .sf-entity-ref-character { border-bottom-color: #c06b9b; }
+.tiptap-editor .sf-entity-ref-item { border-bottom-color: #b8873c; }
+.tiptap-editor .sf-entity-ref-location { border-bottom-color: #3f8f78; }
+.tiptap-editor .sf-entity-ref-codex { border-bottom-color: #557bb8; }
+
+.tiptap-editor p {
+  margin: 0 0 0.75em 0;
+}
+
+.tiptap-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor h1,
+.tiptap-editor h2,
+.tiptap-editor h3,
+.tiptap-editor h4 {
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin: 1.2em 0 0.6em 0;
+}
+
+.tiptap-editor h2 { font-size: 1.3em; }
+.tiptap-editor h3 { font-size: 1.15em; }
+.tiptap-editor h4 { font-size: 1.05em; }
+
+.tiptap-editor strong { font-weight: 700; color: var(--text-primary); }
+.tiptap-editor em { font-style: italic; }
+
+.tiptap-editor ul,
+.tiptap-editor ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0 0.75em 0;
+}
+
+.tiptap-editor li {
+  margin: 0.2em 0;
+}
+
+.tiptap-editor blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 0.3em 0 0.3em 1em;
+  margin: 0.75em 0;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-radius: 0 4px 4px 0;
+}
+
+.tiptap-editor hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+.tiptap-editor code {
+  background: var(--bg-elevated);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+
+/* 占位符 */
+.tiptap-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+
+/* 浅色主题下修正历史遗留的 Tailwind 亮色工具类：这些类原本面向暗色底，放到纸面上会发虚。 */
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-green-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-emerald-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-green-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-emerald-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-green-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-emerald-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-green-500"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-emerald-500"] {
+  color: #065F46 !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-sky-300,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-sky-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-blue-300,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-blue-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-blue-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-sky-300"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-sky-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-blue-300"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-blue-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-blue-500"] {
+  color: #1E40AF !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-yellow-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-yellow-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-amber-300,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-amber-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-amber-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-yellow-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-yellow-500"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-amber-300"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-amber-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-amber-500"] {
+  color: #92400E !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-red-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-red-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-rose-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-rose-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-red-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-red-500"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-rose-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-rose-500"] {
+  color: #B91C1C !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-purple-200,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-purple-300,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-purple-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-purple-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-purple-200"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-purple-300"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-purple-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-purple-500"] {
+  color: #7E22CE !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-pink-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-pink-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-pink-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-pink-500"] {
+  color: #BE185D !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-orange-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-orange-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-orange-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-orange-500"] {
+  color: #C2410C !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-lime-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-lime-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-lime-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-lime-500"] {
+  color: #4D7C0F !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-teal-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-teal-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-cyan-400,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .text-cyan-500,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-teal-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-teal-500"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-cyan-400"],
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) [class*="text-cyan-500"] {
+  color: #0F766E !important;
+}
+
+/* 浅色主题下提高彩色徽标/按钮底色对比度；只覆盖旧 Tailwind 硬编码色，不影响主题 token 与熔炉深色主题。 */
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-green-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-green-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-green-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-green-500\/20,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-emerald-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-emerald-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-emerald-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-emerald-500\/20 {
+  background-color: rgba(5, 150, 105, 0.16) !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-sky-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-sky-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-sky-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-sky-500\/20,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-blue-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-blue-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-blue-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-blue-500\/20 {
+  background-color: rgba(37, 99, 235, 0.14) !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-yellow-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-yellow-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-yellow-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-yellow-500\/20,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-amber-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-amber-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-amber-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-amber-500\/20 {
+  background-color: rgba(217, 119, 6, 0.16) !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-red-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-red-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-red-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-red-500\/20,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-rose-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-rose-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-rose-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-rose-500\/20 {
+  background-color: rgba(220, 38, 38, 0.14) !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-purple-400\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-purple-400\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-purple-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-purple-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-purple-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-purple-500\/20,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-pink-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-pink-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-pink-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-pink-500\/20 {
+  background-color: rgba(126, 34, 206, 0.13) !important;
+}
+
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-cyan-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-cyan-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-cyan-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-cyan-500\/20,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-teal-500\/5,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-teal-500\/10,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-teal-500\/15,
+:is([data-theme="paper"], [data-theme="scroll"], [data-theme="warm"], [data-theme="slate"]) .bg-teal-500\/20 {
+  background-color: rgba(15, 118, 110, 0.13) !important;
+}
+/* 正文便签使用主题属性选择器；GitHub 主题没有 Tailwind 的 .dark 父类。 */
+.sf-note { background: var(--note-bg); color: var(--note-ink); border-color: var(--note-border); }
+.sf-note-header { background: var(--note-head); }
+.sf-note-input { color: var(--note-ink); caret-color: var(--note-ink); }
+.sf-note[data-color="yellow"] { --note-bg: #fef9c3; --note-head: #fde68a; --note-ink: #713f12; --note-border: #eab308; }
+.sf-note[data-color="blue"] { --note-bg: #dbeafe; --note-head: #bfdbfe; --note-ink: #1e3a8a; --note-border: #60a5fa; }
+.sf-note[data-color="green"] { --note-bg: #dcfce7; --note-head: #bbf7d0; --note-ink: #14532d; --note-border: #4ade80; }
+.sf-note[data-color="pink"] { --note-bg: #fce7f3; --note-head: #fbcfe8; --note-ink: #831843; --note-border: #f472b6; }
+.sf-note[data-color="purple"] { --note-bg: #f3e8ff; --note-head: #e9d5ff; --note-ink: #581c87; --note-border: #c084fc; }
+.sf-note[data-color="orange"] { --note-bg: #ffedd5; --note-head: #fed7aa; --note-ink: #7c2d12; --note-border: #fb923c; }
+.sf-note-swatch-yellow { background: #eab308; }
+.sf-note-swatch-blue { background: #60a5fa; }
+.sf-note-swatch-green { background: #4ade80; }
+.sf-note-swatch-pink { background: #f472b6; }
+.sf-note-swatch-purple { background: #c084fc; }
+.sf-note-swatch-orange { background: #fb923c; }
+[data-theme="github"] .sf-note[data-color="yellow"] { --note-bg: #3d321a; --note-head: #57451e; --note-ink: #f9e6a6; --note-border: #8b691f; }
+[data-theme="github"] .sf-note[data-color="blue"] { --note-bg: #1c3045; --note-head: #25425f; --note-ink: #c6e6ff; --note-border: #3b6e9c; }
+[data-theme="github"] .sf-note[data-color="green"] { --note-bg: #1c382c; --note-head: #26503b; --note-ink: #c2f0d3; --note-border: #39835c; }
+[data-theme="github"] .sf-note[data-color="pink"] { --note-bg: #452737; --note-head: #60334a; --note-ink: #ffd4e7; --note-border: #965475; }
+[data-theme="github"] .sf-note[data-color="purple"] { --note-bg: #352b4d; --note-head: #493864; --note-ink: #e5d4ff; --note-border: #7960a3; }
+[data-theme="github"] .sf-note[data-color="orange"] { --note-bg: #45301e; --note-head: #614125; --note-ink: #ffdfbd; --note-border: #9b6632; }

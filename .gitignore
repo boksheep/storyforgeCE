@@ -1,0 +1,43 @@
+node_modules
+dist/
+# 网页云端版（WEB-DEPLOY-1）的独立构建产物：base=/ 的静态站点，与 dist/ 隔离
+dist-web/
+.DS_Store
+*.local
+*.tsbuildinfo
+
+# Azgaar Fantasy Map Generator（构建产物，运行 setup 脚本生成）
+public/fmg/
+
+# OCR runtime is copied from locked npm packages; model files remain source assets.
+public/map-ocr/worker.min.js
+public/map-ocr/*.wasm
+public/map-ocr/*.wasm.js
+public/LICENSE
+public/THIRD-PARTY-NOTICES.md
+public/third-party-licenses/
+
+# 临时文件
+tree.txt
+*.bak
+coverage/
+test-results/
+playwright-report/
+
+# Release packaging outputs
+release/
+packaging/desktop-server/web/*
+!packaging/desktop-server/web/placeholder.txt
+
+# 构建/测试用的临时目录（本机 TEMP 指到工作区时会产生，禁止入库）
+.tmp-build/
+
+# 运行日志输出目录（LOG-1：默认写应用目录/绑定文件夹的 log/，
+# 用仓库目录当工作目录跑起来时会在仓库里生成，禁止入库）
+log/
+
+# 编码 Agent 的本地工作区数据（记忆/会话），属于本机私有状态，禁止入库
+.workbuddy-ai/
+
+# 本仓库以 npm 为唯一包管理器（package-lock.json 入库），pnpm 锁文件是误生成产物
+pnpm-lock.yaml

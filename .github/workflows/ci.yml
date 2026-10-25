@@ -1,0 +1,49 @@
+name: CI
+
+# 源码仓库的构建闸门：保证 clone 下来能装、能编译、能构建。
+# 本仓库只分发源码（不含开发文档与自动化测试），因此只保留与 src/ 相关的检查。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: 表注册完整性(REQUIRED_TABLES vs schema)
+        run: npm run check:required-tables
+
+      - name: 架构铁律(三注册表反模式守护)
+        run: npm run check:architecture
+
+      - name: 源码可达性(防孤儿文件回潮)
+        run: npm run check:source-reachability
+
+      - name: 生产依赖漏洞门槛
+        run: npm run check:dependencies
+
+      - name: ESLint 零 warning
+        run: npm run lint
+
+      - name: TypeScript 严格类型检查
+        run: npx tsc --noEmit
+
+      - name: 生产构建
+        run: npm run build
+
+      - name: 构建产物体积预算
+        run: npm run check:bundle-size

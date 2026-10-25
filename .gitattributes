@@ -1,0 +1,5 @@
+# Windows 批处理脚本必须用 CRLF 换行，否则 cmd.exe 在 label/goto（:DEPS_OK 等）处解析失败，
+# 报「系统找不到指定的批处理标签」「'xxx' 不是内部或外部命令」。锁死 eol=crlf，
+# git 检出与 GitHub「下载 ZIP」都会得到 CRLF，且防止编辑器/工具再把它写回 LF。
+*.bat text eol=crlf
+*.cmd text eol=crlf

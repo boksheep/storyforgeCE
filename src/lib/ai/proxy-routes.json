@@ -1,0 +1,17 @@
+{
+  "_comment": "StoryForge AI 代理路由的单一事实源。vite.config.ts（开发环境）与 desktop/（Electron 桌面版）共用，禁止各写一份。键 = 本地前缀，值为上游地址与重写规则。",
+  "routes": [
+    { "prefix": "/deepseek-proxy", "target": "https://api.deepseek.com", "rewriteTo": "" },
+    { "prefix": "/openai-proxy", "target": "https://api.openai.com", "rewriteTo": "" },
+    { "prefix": "/kimi-proxy", "target": "https://api.moonshot.cn", "rewriteTo": "" },
+    { "prefix": "/claude-proxy", "target": "https://api.anthropic.com", "rewriteTo": "" },
+    { "prefix": "/nvidia-proxy", "target": "https://integrate.api.nvidia.com", "rewriteTo": "" },
+    { "prefix": "/doubao-proxy", "target": "https://ark.cn-beijing.volces.com", "rewriteTo": "" },
+    { "prefix": "/agnes-proxy", "target": "https://apihub.agnes-ai.com", "rewriteTo": "" },
+    { "prefix": "/longcat-proxy", "target": "https://api.longcat.chat", "rewriteTo": "" },
+    { "prefix": "/opencode-proxy", "target": "https://opencode.ai", "rewriteTo": "/zen/go" },
+    { "prefix": "/siliconflow-proxy", "target": "https://api.siliconflow.cn", "rewriteTo": "" },
+    { "prefix": "/qwen-proxy", "target": "https://dashscope.aliyuncs.com", "rewriteTo": "" },
+    { "prefix": "/glm-proxy", "target": "https://open.bigmodel.cn", "rewriteTo": "" }
+  ]
+}
