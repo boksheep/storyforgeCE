@@ -182,7 +182,7 @@ export default function HomePage() {
         </Button>
 
         <a
-          href="https://github.com/yuanbw2025/storyforge"
+          href="https://github.com/boksheep/storyforgeCE"
           target="_blank"
           rel="noopener noreferrer"
           className="p-2 rounded-lg hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors ml-auto"
