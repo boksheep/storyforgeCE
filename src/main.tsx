@@ -18,6 +18,7 @@ import { registerStoryForgeServiceWorker } from './lib/pwa/register-service-work
 import { resolveRouterBasename } from './lib/deploy/app-base'
 import { APP_BUILD_ID } from './lib/version'
 import { installRuntimeDiagnostics } from './lib/diagnostics/local-diagnostic-report'
+import { installOperationTrace } from './lib/history/operation-trace'
 import { loadLogSettings } from './lib/logging/log-settings'
 import { log, logEvent, setLogLevel, setLoggingEnabled } from './lib/logging/logger'
 import './index.css'
@@ -26,6 +27,7 @@ import './index.css'
 applyStoryForgeTheme(resolveStoryForgeTheme(localStorage.getItem('storyforge-theme')))
 registerStoryForgeServiceWorker()
 installRuntimeDiagnostics()
+installOperationTrace()
 
 /**
  * LOG-1：先按本机设置启用日志，再**延后**安装落盘调度器。
@@ -36,6 +38,7 @@ installRuntimeDiagnostics()
 const logSettings = loadLogSettings()
 setLoggingEnabled(logSettings.enabled)
 setLogLevel(logSettings.level)
+log.info('StepRecorder', 'operation.trace.installed', '操作轨迹已启用', { limit: 200 })
 logEvent({
   level: 'info',
   tag: 'bootstrap',

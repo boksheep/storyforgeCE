@@ -133,7 +133,8 @@ async function remapRegisteredCharacterArrays(
         const current = row[ref.field]
         if (!Array.isArray(current)) continue
         const next = remapIdArray(current, fromId, toId)
-        if (next.changed) patch[ref.field] = next.values
+        if (next.changed) patch[ref.field] = ref.minSizeToKeep && next.values.length < ref.minSizeToKeep
+          ? undefined : next.values
       }
       if (Object.keys(patch).length) {
         patch.updatedAt = Date.now()

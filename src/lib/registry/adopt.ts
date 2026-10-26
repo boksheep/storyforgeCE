@@ -226,6 +226,14 @@ async function adoptCollectionRecord(
     }
   }
 
+  const adoption = ADOPTION_BY_TARGET.get(input.target)!
+  const combined = { ...target, ...patch } as Record<string, unknown>
+  if (!await applyFkChecks(combined, input.data, adoption, result, input.projectId, input.worldGroupId ?? null)) return result
+  if (!await applyArrayMemberChecks(combined, input.data, adoption, result, input.projectId)) return result
+  for (const check of adoption.arrayMemberChecks ?? []) {
+    if (check.field in patch) patch[check.field] = combined[check.field]
+  }
+
   patch.updatedAt = Date.now()
   await tableSpec.table.update(input.recordId!, patch as any)
   await refreshCanonSourceAfterWrite(input.target, input.projectId, input.recordId!, Object.keys(patch))
@@ -418,7 +426,7 @@ async function adoptCollection(
     if (input.target === 'knowledgeLedger') item = { ...item, status: 'candidate' }
     if (!applyRequired(item, raw, adoption, result)) continue
     if (!await applyFkChecks(item, raw, adoption, result, input.projectId, input.worldGroupId ?? null)) continue
-    await applyArrayMemberChecks(item, adoption, result)
+    if (!await applyArrayMemberChecks(item, raw, adoption, result, input.projectId)) continue
     applyAutoStamps(item, input, tableSpec, adoption)
 
     const existing = await findExisting(input.projectId, tableSpec, item, adoption)
@@ -671,21 +679,34 @@ async function applyFkChecks(
 
 async function applyArrayMemberChecks(
   item: Record<string, unknown>,
+  raw: unknown,
   adoption: CollectionAdoptionSpec,
   result: AdoptResult,
-): Promise<void> {
+  projectId: number,
+): Promise<boolean> {
   for (const arr of adoption.arrayMemberChecks ?? []) {
     const value = item[arr.field]
     if (!Array.isArray(value)) continue
     const targetSpec = PROJECT_TABLES.find(s => s.name === arr.itemTarget)
     if (!targetSpec) continue
     const filtered: unknown[] = []
+    const seen = new Set<unknown>()
     for (const v of value) {
-      if (await targetSpec.table.get(v as number)) filtered.push(v)
-      else result.fkErrors.push({ field: `${arr.field}[]`, refValue: v })
+      const target = Number.isInteger(v) && Number(v) > 0 ? await targetSpec.table.get(v as number) : null
+      if (target && await rowBelongsToProject(target, projectId, targetSpec) && !seen.has(v)) {
+        filtered.push(v)
+        seen.add(v)
+      } else result.fkErrors.push({ field: `${arr.field}[]`, refValue: v })
+    }
+    const validLength = filtered.length >= (arr.minLength ?? 0)
+    const containsEndpoints = (arr.includeFields ?? []).every(field => filtered.includes(item[field]))
+    if (arr.onInvalid === 'reject' && (filtered.length !== value.length || !validLength || !containsEndpoints)) {
+      result.skipped.push({ reason: `${arr.field} 成员无效`, data: raw })
+      return false
     }
     item[arr.field] = filtered
   }
+  return true
 }
 
 function applyAutoStamps(
@@ -752,7 +773,13 @@ async function rowBelongsToProject(row: any, projectId: number, tableSpec: Table
 function identityMatches(row: Record<string, unknown>, item: Record<string, unknown>, adoption: CollectionAdoptionSpec): boolean {
   if (adoption.identity === 'id') return row.id === item.id
   if (adoption.identity === 'name') return row.name === item.name
-  return adoption.identity.fields.every(f => (row[f] ?? null) === (item[f] ?? null))
+  return adoption.identity.fields.every(f => {
+    const left = row[f] ?? null
+    const right = item[f] ?? null
+    return Array.isArray(left) && Array.isArray(right)
+      ? left.length === right.length && left.every((value, index) => value === right[index])
+      : left === right
+  })
 }
 
 function identityValue(item: Record<string, unknown>, adoption: CollectionAdoptionSpec): unknown {

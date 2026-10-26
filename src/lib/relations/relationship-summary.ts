@@ -6,7 +6,7 @@ export const RELATION_FIELD_PREFIX = '- 与【'
 
 type RelationForSummary = Pick<
   CharacterRelation,
-  'fromCharacterId' | 'toCharacterId' | 'label' | 'description' | 'isBidirectional'
+  'fromCharacterId' | 'toCharacterId' | 'participantCharacterIds' | 'label' | 'description' | 'isBidirectional'
 >
 
 interface RelationSummaryPatchInput {
@@ -37,6 +37,17 @@ function appendUniqueLine(existing: string | undefined, line: string): string | 
 }
 
 export function buildRelationshipFieldPatches({ projectId, relation, characters }: RelationSummaryPatchInput): Array<{ characterId: number; relationships: string }> {
+  const groupIds = relation.participantCharacterIds
+  if (groupIds && groupIds.length > 2) {
+    const participants = groupIds.map(id => characters.find(c => c.projectId === projectId && c.id === id))
+    if (participants.some(character => !character?.id) || new Set(groupIds).size !== groupIds.length) return []
+    return participants.flatMap(character => {
+      const peers = participants.filter(peer => peer!.id !== character!.id).map(peer => peer!.name).join('、')
+      const line = `- 与【${peers}】共同：${relation.label?.trim() || '关系'}${relation.description?.trim() ? `。${relation.description.trim()}` : '。'}`
+      const relationships = appendUniqueLine(character!.relationships, line)
+      return relationships == null ? [] : [{ characterId: character!.id!, relationships }]
+    })
+  }
   const from = characters.find(c => c.projectId === projectId && c.id === relation.fromCharacterId)
   const to = characters.find(c => c.projectId === projectId && c.id === relation.toCharacterId)
   if (!from?.id || !to?.id) return []
@@ -52,7 +63,8 @@ export function buildRelationshipFieldPatches({ projectId, relation, characters 
 }
 
 export async function syncRelationToCharacterFields(input: RelationSummaryPatchInput): Promise<number> {
-  const endpoints = [input.relation.fromCharacterId, input.relation.toCharacterId]
+  const endpoints = input.relation.participantCharacterIds?.length && input.relation.participantCharacterIds.length > 2
+    ? input.relation.participantCharacterIds : [input.relation.fromCharacterId, input.relation.toCharacterId]
   const latestRows = await db.characters.bulkGet(endpoints)
   const characterById = new Map<number, Character>()
   for (const character of input.characters) {

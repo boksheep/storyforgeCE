@@ -743,6 +743,7 @@ export const CORE_PROMPT_SEEDS: PromptSeed[] = [
 2. 识别文本中出现的所有角色名字
 3. 分析角色之间的关系类型和具体描述
 4. 只提取有文本依据的关系，不要臆测
+5. 若同一段关系同时涉及三名及以上角色（例如共同结盟、家族、团队），保留为一条多人关系，不要机械拆成所有两两组合
 
 关系类型说明：
 - family：亲属关系（父子、母女、兄弟、姐妹等）
@@ -766,8 +767,11 @@ export const CORE_PROMPT_SEEDS: PromptSeed[] = [
   "bidirectional": true/false
 }
 
+多人关系用同样的字段，但以 "characters": ["角色A", "角色B", "角色C"] 代替 char1/char2；数组至少三名，且必须是同一段有文本依据的共同关系。
+
 注意：
 - char1 和 char2 必须使用文本中出现的原始名字
+- characters 中每个名字也必须使用文本中的原始名字；只涉及两人时仍用 char1/char2
 - 同一对角色如果有多种关系，分别列出
 - bidirectional 表示是否双向：亲属、朋友、恋人一般为 true；师徒、上下级一般为 false`,
     userPromptTemplate: `小说：{{projectName}}
@@ -775,7 +779,7 @@ export const CORE_PROMPT_SEEDS: PromptSeed[] = [
 已有角色列表：
 {{characterList}}
 
-{{#if outlineSummary}}大纲摘要：
+{{#if outlineSummary}}素材证据：
 {{outlineSummary}}
 
 {{/if}}{{#if chapterContent}}章节正文片段：

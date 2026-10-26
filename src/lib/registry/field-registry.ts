@@ -267,6 +267,10 @@ export const FIELD_REGISTRY: FieldSpec[] = [
   // characterRelations：AI 提取只能在作者确认后经 adopt() 写入。
   num('characterRelations', 'fromCharacterId', ['起点角色ID']),
   num('characterRelations', 'toCharacterId', ['终点角色ID']),
+  arr('characterRelations', 'participantCharacterIds', ['参与角色ID列表'], value => {
+    if (!Array.isArray(value) || !value.every(id => Number.isInteger(id) && id > 0)) return undefined
+    return [...new Set(value as number[])].sort((a, b) => a - b)
+  }),
   enumeration(
     'characterRelations',
     'relationType',

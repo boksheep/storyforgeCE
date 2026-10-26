@@ -2,6 +2,7 @@ import type { Table } from 'dexie'
 import { db } from '../db/schema'
 import { PROJECT_TABLES } from '../registry/project-tables'
 import { APP_BUILD_ID } from '../version'
+import { sanitizeError } from '../logging/log-event'
 
 const MAX_RUNTIME_ERRORS = 20
 const MAX_STACK_FRAMES = 8
@@ -55,12 +56,7 @@ function normalizeErrorName(value: unknown): string {
 }
 
 function safeStackFrames(value: unknown): string[] {
-  if (!(value instanceof Error) || !value.stack) return []
-  return value.stack
-    .split('\n')
-    .slice(1, MAX_STACK_FRAMES + 1)
-    .map(frame => frame.trim().replace(/[?#].*$/, '').slice(0, 240))
-    .filter(Boolean)
+  return sanitizeError(value)?.frames.slice(0, MAX_STACK_FRAMES) ?? []
 }
 
 export function recordRuntimeDiagnosticError(

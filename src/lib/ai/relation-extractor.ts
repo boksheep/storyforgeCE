@@ -4,16 +4,18 @@
  * 从大纲摘要 + 章节正文中提取角色关系，
  * 返回结构化的关系数组供 UI 预览和写入。
  */
-import { db } from '../db/schema'
 import type { Character, ChatMessage, RelationType } from '../types'
 import { usePromptStore } from '../../stores/prompt'
 import { renderPrompt } from './prompt-engine'
 import { characterAxesLabel } from '../character/character-axes'
+import { assembleContext } from '../registry/assemble-context'
 
 /** AI 返回的原始关系条目 */
 export interface ExtractedRelation {
   char1: string
   char2: string
+  /** 同一关系的全部参与者；双人关系兼容旧格式。 */
+  characters?: string[]
   type: RelationType
   label: string
   description: string
@@ -24,6 +26,7 @@ export interface ExtractedRelation {
 export interface MatchedRelation extends ExtractedRelation {
   fromCharacterId: number
   toCharacterId: number
+  participantCharacterIds?: number[]
   /** 是否与已有关系重复 */
   isDuplicate: boolean
 }
@@ -34,53 +37,22 @@ export interface MatchedRelation extends ExtractedRelation {
 export async function buildRelationExtractPrompt(
   projectId: number,
   characters: Character[],
+  projectName = '未命名项目',
 ): Promise<ChatMessage[]> {
   // 1. 角色列表
   const characterList = characters
     .map(c => `- ${c.name}（${characterAxesLabel(c)}）${c.shortDescription ? '：' + c.shortDescription : ''}`)
     .join('\n')
 
-  // 2. 大纲摘要
-  const outlineNodes = await db.outlineNodes
-    .where('projectId').equals(projectId)
-    .toArray()
-  const outlineSummary = outlineNodes
-    .filter(n => n.summary)
-    .sort((a, b) => a.order - b.order)
-    .map(n => `[${n.title}] ${n.summary}`)
-    .join('\n')
+  // 所有项目证据从登记源装配，保留预算与截断语义。
+  const evidence = await assembleContext({ projectId, sourceKeys: ['relationExtractionEvidence'], inputBudgetMaxTokens: 6000 })
 
-  // 3. 章节正文（取前 N 章，控制总 token）
-  const chapters = await db.chapters
-    .where('projectId').equals(projectId)
-    .toArray()
-  const sortedChapters = chapters
-    .filter(c => c.content && c.content.length > 50)
-    .sort((a, b) => a.order - b.order)
-
-  // 限制总字符数在 ~8000 字以内（约 5000 token），优先取前面的章节
-  let totalChars = 0
-  const MAX_CHARS = 8000
-  const contentParts: string[] = []
-  for (const ch of sortedChapters) {
-    const snippet = ch.content.slice(0, 2000)
-    if (totalChars + snippet.length > MAX_CHARS) break
-    contentParts.push(`[${ch.title}]\n${snippet}`)
-    totalChars += snippet.length
-  }
-  const chapterContent = contentParts.join('\n\n')
-
-  // 4. 获取项目名
-  const project = await db.projects.get(projectId)
-  const projectName = project?.name || '未命名项目'
-
-  // 5. 渲染 prompt
   const tpl = usePromptStore.getState().getActive('relation.extract')
   const { messages } = renderPrompt(tpl, {
     projectName,
     characterList,
-    outlineSummary: outlineSummary || '',
-    chapterContent: chapterContent || '',
+    outlineSummary: evidence.text,
+    chapterContent: '',
   })
   return messages
 }
@@ -111,18 +83,22 @@ export function parseRelationOutput(output: string): ExtractedRelation[] {
       'master', 'student', 'ally', 'subordinate', 'other',
     ])
 
-    return parsed
-      .filter((item: Record<string, unknown>) =>
-        item.char1 && item.char2 && item.type && VALID_TYPES.has(String(item.type))
-      )
-      .map((item: Record<string, unknown>) => ({
-        char1: String(item.char1),
-        char2: String(item.char2),
+    return parsed.flatMap((item: Record<string, unknown>) => {
+      if (!item || !VALID_TYPES.has(String(item.type))) return []
+      const names = Array.isArray(item.characters)
+        ? item.characters.filter((name): name is string => typeof name === 'string').map(name => name.trim())
+        : [item.char1, item.char2].filter((name): name is string => typeof name === 'string').map(name => name.trim())
+      const unique = [...new Set(names.filter(Boolean))]
+      if (unique.length < 2) return []
+      return [{
+        char1: unique[0], char2: unique[1],
+        ...(unique.length > 2 ? { characters: unique } : {}),
         type: String(item.type) as RelationType,
         label: String(item.label || ''),
         description: String(item.description || ''),
         bidirectional: item.bidirectional !== false,
-      }))
+      }]
+    })
   } catch {
     return []
   }
@@ -134,51 +110,48 @@ export function parseRelationOutput(output: string): ExtractedRelation[] {
 export function matchRelations(
   extracted: ExtractedRelation[],
   characters: Character[],
-  existingRelations: { fromCharacterId: number; toCharacterId: number; relationType: string }[],
+  existingRelations: { fromCharacterId: number; toCharacterId: number; relationType: string; participantCharacterIds?: number[] }[],
 ): MatchedRelation[] {
-  // 建立名字 → 角色 ID 的映射（支持模糊匹配）
-  const nameMap = new Map<string, number>()
+  // 只接受唯一的正式名、别名或省姓名称，避免包含匹配把陌生人误认成角色。
+  const nameMap = new Map<string, number | null>()
+  const registerName = (name: string, id: number) => {
+    const normalized = name.trim()
+    if (!normalized) return
+    if (nameMap.has(normalized) && nameMap.get(normalized) !== id) nameMap.set(normalized, null)
+    else if (!nameMap.has(normalized)) nameMap.set(normalized, id)
+  }
   for (const c of characters) {
     if (c.id != null) {
-      nameMap.set(c.name, c.id)
-      // 也支持去掉姓氏后的名字匹配（如"张三" → 也匹配 "三"，但仅当名字 >= 2 字）
-      if (c.name.length >= 2) {
-        nameMap.set(c.name.slice(1), c.id)
-      }
+      registerName(c.name, c.id)
+      c.aliases?.forEach(alias => registerName(alias, c.id!))
+      if (c.name.length >= 2) registerName(c.name.slice(1), c.id)
     }
   }
 
-  const findCharId = (name: string): number | null => {
-    // 精确匹配优先
-    if (nameMap.has(name)) return nameMap.get(name)!
-    // 包含匹配
-    for (const c of characters) {
-      if (c.id != null && (c.name.includes(name) || name.includes(c.name))) {
-        return c.id
-      }
-    }
-    return null
-  }
+  const findCharId = (name: string): number | null => nameMap.get(name.trim()) ?? null
 
   // 已有关系的快速查重集合
-  const existingSet = new Set(
-    existingRelations.map(r => `${Math.min(r.fromCharacterId, r.toCharacterId)}-${Math.max(r.fromCharacterId, r.toCharacterId)}-${r.relationType}`)
-  )
+  const key = (ids: number[], type: string) => `${[...ids].sort((a, b) => a - b).join('-')}-${type}`
+  const existingSet = new Set(existingRelations.map(r =>
+    key(r.participantCharacterIds?.length && r.participantCharacterIds.length > 2
+      ? r.participantCharacterIds : [r.fromCharacterId, r.toCharacterId], r.relationType)))
 
   const results: MatchedRelation[] = []
 
   for (const rel of extracted) {
-    const fromId = findCharId(rel.char1)
-    const toId = findCharId(rel.char2)
-    if (fromId == null || toId == null || fromId === toId) continue
-
-    const dedupKey = `${Math.min(fromId, toId)}-${Math.max(fromId, toId)}-${rel.type}`
+    const ids = (rel.characters ?? [rel.char1, rel.char2]).map(findCharId)
+    if (ids.some(id => id == null) || new Set(ids).size !== ids.length) continue
+    const matchedIds = ids as number[]
+    const sortedIds = [...matchedIds].sort((a, b) => a - b)
+    const [fromId, toId] = matchedIds.length > 2 ? sortedIds : matchedIds
+    const dedupKey = key(matchedIds, rel.type)
     const isDuplicate = existingSet.has(dedupKey)
 
     results.push({
       ...rel,
       fromCharacterId: fromId,
       toCharacterId: toId,
+      ...(matchedIds.length > 2 ? { participantCharacterIds: sortedIds } : {}),
       isDuplicate,
     })
   }

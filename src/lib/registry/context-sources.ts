@@ -606,13 +606,36 @@ async function readCharacterRelations(projectId: number, worldGroupId?: number |
   const names = new Map(visibleCharacters.filter(item => item.id != null).map(item => [item.id!, item.name]))
   const visibleRows = worldGroupId === undefined
     ? rows
-    : rows.filter(row => names.has(row.fromCharacterId) && names.has(row.toCharacterId))
+    : rows.filter(row => (row.participantCharacterIds?.length && row.participantCharacterIds.length > 2
+      ? row.participantCharacterIds : [row.fromCharacterId, row.toCharacterId]).every(id => names.has(id)))
   if (!visibleRows.length) return ''
   return [
     '【角色关系证据】',
-    ...visibleRows.slice(0, 160).map(row =>
-      `#${row.id ?? 0} ${names.get(row.fromCharacterId) ?? `角色#${row.fromCharacterId}`} → ${names.get(row.toCharacterId) ?? `角色#${row.toCharacterId}`}：${row.label}${row.description ? `（${row.description}）` : ''}`),
+    ...visibleRows.slice(0, 160).map(row => {
+      const ids = row.participantCharacterIds?.length && row.participantCharacterIds.length > 2
+        ? row.participantCharacterIds : [row.fromCharacterId, row.toCharacterId]
+      return `#${row.id ?? 0} ${ids.map(id => names.get(id) ?? `角色#${id}`).join(ids.length > 2 ? ' · ' : row.isBidirectional ? ' ⇄ ' : ' → ')}：${row.label}${row.description ? `（${row.description}）` : ''}`
+    }),
   ].join('\n')
+}
+
+/** 关系提取的项目级抽样证据；统一接受 assembleContext 的预算与裁剪记录。 */
+async function readRelationExtractionEvidence(projectId: number): Promise<string> {
+  const [outlines, chapters] = await Promise.all([
+    db.outlineNodes.where('projectId').equals(projectId).toArray(),
+    db.chapters.where('projectId').equals(projectId).toArray(),
+  ])
+  const evenlySample = <T>(items: T[], limit: number): T[] => {
+    if (items.length <= limit) return items
+    return Array.from({ length: limit }, (_, index) =>
+      items[Math.round(index * (items.length - 1) / (limit - 1))])
+  }
+  const summaries = evenlySample(outlines.filter(node => node.summary), 80)
+    .map(node => `[大纲：${node.title}] ${node.summary}`)
+  const { sequence } = resolveCanonicalChapterSequence(outlines, chapters)
+  const excerpts = evenlySample(sequence.filter(entry => entry.chapter?.content), 12)
+    .map(entry => `[章节：${entry.chapter.title}] ${htmlToPlainText(entry.chapter.content).slice(0, 1200)}`)
+  return ['【角色关系提取证据：大纲与正文抽样，并非全项目穷尽扫描】', ...summaries, ...excerpts].join('\n')
 }
 
 /**
@@ -1395,6 +1418,14 @@ export const CONTEXT_SOURCES: ContextSource[] = [
     layer: 'L2',
     budgetTokens: 2200,
     read: input => readCharacterRelations(input.projectId, input.worldGroupId),
+  },
+  {
+    key: 'relationExtractionEvidence',
+    label: '关系提取的大纲与正文抽样',
+    scope: 'project',
+    layer: 'L2',
+    budgetTokens: 6000,
+    read: input => readRelationExtractionEvidence(input.projectId),
   },
   {
     key: 'references',

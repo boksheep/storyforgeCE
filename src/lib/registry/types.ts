@@ -47,6 +47,8 @@ export interface ArrayRef {
   field: string       // 数组字段名(或 JSON 数组字符串字段名)
   itemTarget: string  // 数组元素指向哪张表
   onDelete: 'removeItem' | 'setNullItem' | 'keep'
+  /** 成员不足时清除此可选数组，使记录退回旧的双端点语义。 */
+  minSizeToKeep?: number
 }
 
 /** 间接归属(本表没有 projectId,通过另一张表的字段间接挂项目) */
@@ -220,8 +222,9 @@ export interface CollectionAdoptionSpec {
   autoStamps: ('projectId' | 'worldGroupId' | 'homeWorldGroupId' | 'createdAt' | 'updatedAt')[]
   /** FK 校验:写入前检查字段引用是否存在 */
   fkChecks?: { field: string; target: string }[]
-  /** 数组成员校验:过滤不存在的成员,并记录 fkErrors */
-  arrayMemberChecks?: { field: string; itemTarget: string }[]
+  /** 数组成员校验；严格模式拒绝越项目、缺失、重复或不满足参与人数的记录。 */
+  arrayMemberChecks?: { field: string; itemTarget: string; onInvalid?: 'filter' | 'reject';
+    minLength?: number; includeFields?: string[] }[]
   mergeStrategy?: 'overwrite-non-empty' | 'append-text' | 'union-array'
   /** 允许统一写回入口按这些字段清空旧集合，再写入新结果。 */
   replaceScope?: string[]

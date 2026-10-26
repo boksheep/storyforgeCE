@@ -34,7 +34,7 @@ export const ADOPTION_SCHEMAS: CollectionAdoptionSpec[] = [
     target: 'characterRelations',
     identity: {
       kind: 'composite',
-      fields: ['fromCharacterId', 'toCharacterId', 'relationType'],
+      fields: ['fromCharacterId', 'toCharacterId', 'relationType', 'participantCharacterIds'],
     },
     duplicatePolicy: 'skip',
     required: ['fromCharacterId', 'toCharacterId', 'relationType', 'label', 'isBidirectional'],
@@ -43,6 +43,8 @@ export const ADOPTION_SCHEMAS: CollectionAdoptionSpec[] = [
       { field: 'fromCharacterId', target: 'characters' },
       { field: 'toCharacterId', target: 'characters' },
     ],
+    arrayMemberChecks: [{ field: 'participantCharacterIds', itemTarget: 'characters',
+      onInvalid: 'reject', minLength: 3, includeFields: ['fromCharacterId', 'toCharacterId'] }],
   },
   {
     target: 'foreshadows',

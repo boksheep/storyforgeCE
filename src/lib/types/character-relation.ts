@@ -19,6 +19,8 @@ export interface CharacterRelation extends RagDocumentMetadata {
   projectId: number
   fromCharacterId: number   // 角色 A
   toCharacterId: number     // 角色 B
+  /** 三人以上共同参与的单段关系；含起点与终点。旧双人记录可省略。 */
+  participantCharacterIds?: number[]
   relationType: RelationType
   label: string             // 关系标签（如"父子"、"宿敌"）
   description: string       // 详细描述

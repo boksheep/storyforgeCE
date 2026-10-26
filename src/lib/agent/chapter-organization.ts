@@ -271,7 +271,8 @@ export function buildChapterOrganizationPrompt(input: {
     .map(character => `- #${character.id} ${character.name}`)
     .join('\n') || '无'
   const relationList = input.existingRelations.slice(0, 160).map(relation => (
-    `- ${relation.fromCharacterId} -> ${relation.toCharacterId} (${relation.relationType})`
+    `- ${(relation.participantCharacterIds?.length && relation.participantCharacterIds.length > 2
+      ? relation.participantCharacterIds : [relation.fromCharacterId, relation.toCharacterId]).join(' · ')} (${relation.relationType})`
   )).join('\n') || '无'
   const foreshadowList = input.foreshadows
     .filter(item => item.id != null && item.status !== 'resolved')
@@ -301,7 +302,7 @@ JSON 结构：
 2. 事实谓词只能使用给定 key；拿不准时省略。
 3. 物品只写实际获得或消耗，不把看见、提及、计划获得当成流水。
 4. 年表只写改变剧情进程的大事，importance 为 1-3。
-5. 关系只写本章新建立或明确改变的关系；已有同类型关系不重复。
+5. 关系只写本章新建立或明确改变的关系；已有同类型关系不重复。三名及以上角色共同构成同一段关系时，用 characters:["角色名1","角色名2","角色名3"] 代替 char1/char2，输出一条多人关系，不要两两展开。
 6. 伏笔只可单向推进 planned→planted/echoed/resolved、planted→echoed/resolved、echoed→resolved；普通提及不等于呼应或回收。
 7. 没有候选的分区返回空数组。`,
     },
@@ -699,6 +700,7 @@ export async function adoptChapterOrganizationSelection(input: {
       data: relations.map(relation => ({
         fromCharacterId: relation.fromCharacterId,
         toCharacterId: relation.toCharacterId,
+        ...(relation.participantCharacterIds ? { participantCharacterIds: relation.participantCharacterIds } : {}),
         relationType: relation.type,
         label: relation.label,
         description: relation.description,
@@ -713,6 +715,9 @@ export async function adoptChapterOrganizationSelection(input: {
     for (const selected of relations) {
       const relation = currentRelations.find(current => (
         current.relationType === selected.type
+        && (selected.participantCharacterIds
+          ? JSON.stringify(current.participantCharacterIds) === JSON.stringify(selected.participantCharacterIds)
+          : !current.participantCharacterIds?.length)
         && (
           (
             current.fromCharacterId === selected.fromCharacterId

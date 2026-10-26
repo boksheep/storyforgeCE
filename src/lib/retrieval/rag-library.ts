@@ -206,11 +206,15 @@ function descriptors(): RagDescriptor<any>[] {
       sourceKey: 'characterRelations',
       sourceLabel: '角色关系',
       title: (row: CharacterRelation, context) => {
+        if (row.participantCharacterIds?.length && row.participantCharacterIds.length > 2) {
+          return row.participantCharacterIds.map(id => context.characterNameById.get(id) ?? `角色 #${id}`).join(' · ')
+        }
         const from = context.characterNameById.get(row.fromCharacterId) ?? `角色 #${row.fromCharacterId}`
         const to = context.characterNameById.get(row.toCharacterId) ?? `角色 #${row.toCharacterId}`
         return `${from} → ${to}`
       },
       fields: (row: CharacterRelation) => [
+        field('participantCharacterIds', '参与角色 ID', row.participantCharacterIds?.join('、')),
         field('relationType', '关系类型', row.relationType),
         field('label', '关系标签', row.label),
         field('description', '关系说明', row.description),

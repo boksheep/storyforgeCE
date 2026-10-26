@@ -192,10 +192,13 @@ export const PROJECT_TABLES: TableSpec[] = [
 
   { table: db.characterRelations, name: 'characterRelations', owner: 'project',
     exportable: true,
+    refs: [{ kind: 'array', field: 'participantCharacterIds', itemTarget: 'characters', onDelete: 'removeItem', minSizeToKeep: 3 }],
     exportRemap: [
       { field: 'fromCharacterId', remapVia: 'characters', exportAs: '_fromCharacterIndex', onUnmapped: 'drop' },
       { field: 'toCharacterId', remapVia: 'characters', exportAs: '_toCharacterIndex', onUnmapped: 'drop' },
-    ] },
+    ],
+    exportRefRemap: [{ field: 'participantCharacterIds', remapVia: 'characters', kind: 'id-array', exportAs: '_participantCharacterIndexes' }],
+  },
 
   // (factions 表已于 DB v29 并入 codex.faction 词条并删除)
 

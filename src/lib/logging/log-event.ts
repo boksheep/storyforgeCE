@@ -118,7 +118,7 @@ function shortenStackFrame(rawLine: string): string {
   const prefix = paren > 0 ? `${withoutAt.slice(0, paren).trim()} ` : ''
   const target = (paren > 0 ? withoutAt.slice(paren + 1).replace(/\)\s*$/, '') : withoutAt).trim()
   const slash = Math.max(target.lastIndexOf('/'), target.lastIndexOf('\\'))
-  const basename = slash >= 0 ? target.slice(slash + 1) : target
+  const basename = (slash >= 0 ? target.slice(slash + 1) : target).replace(/[?#].*$/, '')
   return `at ${prefix}${basename}`.trim().slice(0, 160)
 }
 

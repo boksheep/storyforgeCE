@@ -9,6 +9,9 @@ import type { Project, RelationType } from '../../lib/types'
 import { CInput, CTextarea } from '../shared/CompositionInput'
 import { useToast } from '../shared/Toast'
 import { syncRelationToCharacterFields } from '../../lib/relations/relationship-summary'
+import { adopt } from '../../lib/registry/adopt'
+import { db } from '../../lib/db/schema'
+import { log } from '../../lib/logging/logger'
 import RelationGraph from './RelationGraph'
 
 const RELATION_TYPES: { value: RelationType; label: string }[] = [
@@ -61,7 +64,8 @@ export default function CharacterRelationPanel({ project }: Props) {
   )
   const validProjectRelations = useMemo(
     () => projectRelations.filter((r) =>
-      projectCharacterIds.has(r.fromCharacterId) && projectCharacterIds.has(r.toCharacterId),
+      projectCharacterIds.has(r.fromCharacterId) && projectCharacterIds.has(r.toCharacterId)
+      && (r.participantCharacterIds ?? []).every(id => projectCharacterIds.has(id)),
     ),
     [projectRelations, projectCharacterIds],
   )
@@ -83,46 +87,65 @@ export default function CharacterRelationPanel({ project }: Props) {
       const parsed = parseRelationOutput(ai.output)
       const matched = matchRelations(parsed, projectCharacters, validProjectRelations)
       setExtractedRelations(matched)
+      log.info('RelationStore', 'relation.extract.matched', '角色关系候选已匹配', {
+        projectId, parsedCount: parsed.length, matchedCount: matched.length,
+        groupCount: matched.filter(relation => (relation.participantCharacterIds?.length ?? 0) > 2).length,
+        duplicateCount: matched.filter(relation => relation.isDuplicate).length,
+      })
       // 默认选中所有非重复的
       const sel = new Set<number>()
       matched.forEach((r, i) => { if (!r.isDuplicate) sel.add(i) })
       setSelectedExtracted(sel)
     }
-  }, [ai.isStreaming, ai.output, projectCharacters, validProjectRelations])
+  }, [ai.isStreaming, ai.output, projectCharacters, validProjectRelations, projectId])
 
   const handleAIExtract = useCallback(async () => {
     setShowExtractPanel(true)
     setExtractedRelations([])
     setSelectedExtracted(new Set())
-    const messages = await buildRelationExtractPrompt(projectId, projectCharacters)
-    ai.start(messages, undefined, { category: 'relation.extract', projectId })
-  }, [projectId, projectCharacters, ai])
+    try {
+      const messages = await buildRelationExtractPrompt(projectId, projectCharacters, project.name)
+      ai.start(messages, undefined, { category: 'relation.extract', projectId })
+    } catch (error) {
+      log.warn('RelationStore', 'relation.extract.prepare.failed', '角色关系证据准备失败', { projectId })
+      toast.error(`关系提取准备失败：${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }, [projectId, projectCharacters, project.name, ai, toast])
 
   const handleAcceptExtracted = async () => {
-    let written = 0
+    const selected = extractedRelations.filter((_, index) => selectedExtracted.has(index) && !extractedRelations[index].isDuplicate)
     try {
-      for (const [i, rel] of extractedRelations.entries()) {
-        if (!selectedExtracted.has(i)) continue
-        if (!projectCharacterIds.has(rel.fromCharacterId) || !projectCharacterIds.has(rel.toCharacterId)) {
-          toast.error('存在不属于当前项目的角色关系，已跳过。')
-          continue
-        }
-        const relation = {
-          projectId,
+      const result = await adopt({
+        projectId, target: 'characterRelations', mode: 'add-many',
+        data: selected.map(rel => ({
           fromCharacterId: rel.fromCharacterId,
           toCharacterId: rel.toCharacterId,
-          relationType: rel.type,
-          label: rel.label,
-          description: rel.description,
+          ...(rel.participantCharacterIds ? { participantCharacterIds: rel.participantCharacterIds } : {}),
+          relationType: rel.type, label: rel.label, description: rel.description,
           isBidirectional: rel.bidirectional,
-        }
-        await addRelation(relation)
-        await syncRelationToCharacterFields({ projectId, relation, characters: projectCharacters })
-        written++
+        })),
+        historyLabel: '采纳角色关系提取', historySource: 'relation.extract',
+      })
+      for (const written of result.written) {
+        const relation = await db.characterRelations.get(written.id)
+        if (relation) await syncRelationToCharacterFields({ projectId, relation, characters: projectCharacters })
       }
-      if (written > 0) await useCharacterStore.getState().loadAll(projectId)
-      toast.success(`已导入 ${written} 条关系，并同步到角色词条。`)
+      if (result.written.length) {
+        await useCharacterRelationStore.getState().loadAll(projectId)
+        await useCharacterStore.getState().loadAll(projectId)
+      }
+      log.info('RelationStore', 'relation.extract.adopted', '角色关系候选采纳完成', {
+        projectId, selectedCount: selected.length, writtenCount: result.written.length,
+        skippedCount: result.skipped.length, fkErrorCount: result.fkErrors.length,
+      })
+      if (result.skipped.length || result.fkErrors.length) {
+        log.warn('RelationStore', 'relation.extract.rejected', '部分角色关系候选未通过采纳校验', {
+          projectId, skippedCount: result.skipped.length, fkErrorCount: result.fkErrors.length,
+        })
+      }
+      toast.success(`已导入 ${result.written.length} 条关系${result.skipped.length ? `，${result.skipped.length} 条未写入` : ''}。`)
     } catch (err) {
+      log.warn('RelationStore', 'relation.extract.adopt.failed', '角色关系候选采纳失败', { projectId, selectedCount: selected.length })
       toast.error(`导入关系失败：${err instanceof Error ? err.message : '未知错误'}`)
       return
     }
@@ -148,6 +171,21 @@ export default function CharacterRelationPanel({ project }: Props) {
       toast.success('关系已保存。')
     } catch (err) {
       toast.error(`保存关系失败：${err instanceof Error ? err.message : '未知错误'}`)
+    }
+  }
+
+  const handleAddGroup = async () => {
+    if (projectCharacters.length < 3) return
+    const participants = projectCharacters.slice(0, 3).map(character => character.id!)
+    try {
+      await addRelation({
+        projectId, fromCharacterId: participants[0], toCharacterId: participants[1],
+        participantCharacterIds: [...participants].sort((a, b) => a - b),
+        relationType: 'ally', label: '新多人关系', description: '', isBidirectional: true,
+      })
+      toast.success('多人关系已保存，可在列表中调整参与角色。')
+    } catch (error) {
+      toast.error(`保存多人关系失败：${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
 
@@ -231,6 +269,14 @@ export default function CharacterRelationPanel({ project }: Props) {
             <Plus className="w-4 h-4" />
             添加关系
           </button>
+          <button
+            onClick={handleAddGroup}
+            disabled={projectCharacters.length < 3}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 text-accent rounded-lg text-sm hover:bg-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="创建由三名及以上角色共同参与的关系"
+          >
+            <Users className="w-4 h-4" /> 多人关系
+          </button>
         </div>
       </div>
 
@@ -274,8 +320,7 @@ export default function CharacterRelationPanel({ project }: Props) {
               </div>
               <div className="max-h-[300px] overflow-y-auto space-y-2">
                 {extractedRelations.map((rel, i) => {
-                  const fromName = projectCharacters.find(c => c.id === rel.fromCharacterId)?.name || rel.char1
-                  const toName = projectCharacters.find(c => c.id === rel.toCharacterId)?.name || rel.char2
+                  const names = rel.characters ?? [rel.char1, rel.char2]
                   const typeLabel = RELATION_TYPES.find(t => t.value === rel.type)?.label || rel.type
                   const isSelected = selectedExtracted.has(i)
                   return (
@@ -304,9 +349,8 @@ export default function CharacterRelationPanel({ project }: Props) {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium text-text-primary">{fromName}</span>
-                          <span className="text-accent text-xs">{rel.bidirectional ? '⇄' : '→'}</span>
-                          <span className="font-medium text-text-primary">{toName}</span>
+                          <span className="font-medium text-text-primary">{names.join(names.length > 2 ? ' · ' : rel.bidirectional ? ' ⇄ ' : ' → ')}</span>
+                          {names.length > 2 && <span className="text-xs text-accent">多人</span>}
                           <span className="px-1.5 py-0.5 bg-accent/10 text-accent rounded text-xs">{typeLabel}</span>
                           {rel.label && <span className="text-xs text-text-muted">「{rel.label}」</span>}
                           {rel.isDuplicate && (
@@ -379,6 +423,11 @@ export default function CharacterRelationPanel({ project }: Props) {
             >
               {/* 关系概览行 */}
               <div className="flex items-center gap-3 mb-3">
+                {(rel.participantCharacterIds?.length ?? 0) > 2 ? (
+                  <span className="text-sm text-text-primary flex-1 min-w-0 truncate" title={rel.participantCharacterIds!.map(getCharacterName).join('、')}>
+                    多人 · {rel.participantCharacterIds!.map(getCharacterName).join('、')}
+                  </span>
+                ) : <>
                 {/* 角色 A */}
                 <select
                   value={rel.fromCharacterId}
@@ -423,6 +472,7 @@ export default function CharacterRelationPanel({ project }: Props) {
                     </option>
                   ))}
                 </select>
+                </>}
 
                 {/* 关系类型 */}
                 <select
@@ -459,11 +509,11 @@ export default function CharacterRelationPanel({ project }: Props) {
 
               {/* 关系标签（始终显示） */}
               <div className="flex items-center gap-2 text-sm text-text-secondary">
-                <span className="font-medium text-text-primary">{getCharacterName(rel.fromCharacterId)}</span>
-                <span className="text-accent">
-                  {rel.isBidirectional ? '⇄' : '→'}
+                <span className="font-medium text-text-primary">
+                  {(rel.participantCharacterIds?.length ?? 0) > 2
+                    ? rel.participantCharacterIds!.map(getCharacterName).join(' · ')
+                    : `${getCharacterName(rel.fromCharacterId)} ${rel.isBidirectional ? '⇄' : '→'} ${getCharacterName(rel.toCharacterId)}`}
                 </span>
-                <span className="font-medium text-text-primary">{getCharacterName(rel.toCharacterId)}</span>
                 <span className="text-text-muted">：</span>
                 {isEditing ? (
                   <CInput
@@ -480,6 +530,27 @@ export default function CharacterRelationPanel({ project }: Props) {
               {/* 展开的编辑区域 */}
               {isEditing && (
                 <div className="mt-3 pt-3 border-t border-border">
+                  {(rel.participantCharacterIds?.length ?? 0) > 2 && (
+                    <fieldset className="mb-3">
+                      <legend className="text-xs text-text-muted mb-2">参与角色（至少三名）</legend>
+                      <div className="flex flex-wrap gap-2">
+                        {projectCharacters.map(character => {
+                          const selected = rel.participantCharacterIds!.includes(character.id!)
+                          return <label key={character.id} className="text-xs text-text-secondary flex items-center gap-1">
+                            <input type="checkbox" checked={selected} onChange={() => {
+                              const ids = selected
+                                ? rel.participantCharacterIds!.filter(id => id !== character.id)
+                                : [...rel.participantCharacterIds!, character.id!]
+                              if (ids.length < 3) { toast.error('多人关系至少需要三名角色。'); return }
+                              const sorted = ids.sort((a, b) => a - b)
+                              void handleUpdateRelation(rel.id!, { participantCharacterIds: sorted,
+                                fromCharacterId: sorted[0], toCharacterId: sorted[1] }, { notify: true })
+                            }} />{character.name}
+                          </label>
+                        })}
+                      </div>
+                    </fieldset>
+                  )}
                   <label className="block text-xs text-text-muted mb-1">关系描述</label>
                   <CTextarea
                     value={rel.description}
