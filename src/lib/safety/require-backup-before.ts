@@ -68,10 +68,6 @@ export function setBackupDialogAdapter(adapter: BackupDialogAdapter | null): voi
 export async function requireBackupBefore(
   options: RequireBackupOptions,
 ): Promise<boolean> {
-  // 测试环境:自动放行(不阻塞反例测试)
-  if (isTestEnv()) {
-    return true
-  }
   const choice = await (dialogAdapter?.chooseBackup(options) ?? promptUserChoiceFallback(options))
 
   switch (choice) {
@@ -171,7 +167,6 @@ async function downloadProjectBackup(projectId: number, operation: string): Prom
  * 适用于"风险较低但不可逆"的操作。
  */
 export async function requireConfirmation(message: string): Promise<boolean> {
-  if (isTestEnv()) return true
   return confirmFallback({
     title: '确认继续？',
     message,
@@ -184,15 +179,4 @@ function confirmFallback(options: SafetyConfirmOptions): Promise<boolean> {
   if (dialogAdapter) return dialogAdapter.confirm(options)
   const lines = [options.title, options.message].filter(Boolean).join('\n\n')
   return Promise.resolve(globalThis.confirm(lines))
-}
-
-/**
- * 测试环境检测(vitest 自动设置 NODE_ENV=test;happy-dom 中 process 可用)。
- */
-function isTestEnv(): boolean {
-  try {
-    return typeof process !== 'undefined' && process.env?.NODE_ENV === 'test'
-  } catch {
-    return false
-  }
 }
