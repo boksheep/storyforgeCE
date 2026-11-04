@@ -1,0 +1,18 @@
+{
+  "name": "storyforge-cloud-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "StoryForge 私有化云数据库服务：零运行时依赖（node:http + node:sqlite + node:crypto）",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/index.mjs",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/index.mjs",
+    "test": "node --disable-warning=ExperimentalWarning --test test/auth.test.mjs test/sync.test.mjs test/security.test.mjs test/snapshots.test.mjs test/hardening.test.mjs test/captcha.test.mjs",
+    "create-user": "node --disable-warning=ExperimentalWarning scripts/create-user.mjs",
+    "backup": "node --disable-warning=ExperimentalWarning scripts/backup.mjs"
+  },
+  "dependencies": {}
+}
