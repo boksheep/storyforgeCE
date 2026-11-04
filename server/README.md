@@ -259,15 +259,15 @@ SF_CAPTCHA_ISSUE_MAX=60   # 单 IP 在窗口内最多拉多少张
 npm test
 ```
 
-80 项，分六组：
+81 项，分六组：
 
 - `test/auth.test.mjs`（13）：cookie 属性、账号枚举同形、CSRF、限流 429/423、
   会话失效、`no-store`。
 - `test/sync.test.mjs`（14）：创建/幂等重放/未变跳过/409 摘要/缺表 422/
   往返逐字段一致/304/越权 404/force 快照/软删除。
-- `test/security.test.mjs`（13）：**gzip 炸弹 413 且不改 rev**、正常 gzip 可用、
+- `test/security.test.mjs`（11）：**gzip 炸弹 413 且不改 rev**、正常 gzip 可用、
   超大 Content-Length、非 JSON、协议版本、projectUid 校验、opId 跨项目复用、历史版本越权。
-- `test/snapshots.test.mjs`（14）：上传/列表不含载荷/幂等覆盖/取回一致/类型与内容校验/
+- `test/snapshots.test.mjs`（15）：上传/列表不含载荷/幂等覆盖/取回一致/类型与内容校验/
   单份上限 413/项目不存在 404/越权 404/删除/保留上限轮转/未登录 401。
 - `test/hardening.test.mjs`（14）：**密码喷洒被 IP 全局限流拦下**、限流表有硬上限、
   超长用户名 401、用户名/密码里的 SQL 注入串被当普通字符串、伪造 Host 不通过 CSRF、
