@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useProjectStore } from '../stores/project'
 import { useWorldviewStore } from '../stores/worldview'
 import { useCharacterStore } from '../stores/character'
@@ -18,6 +18,7 @@ import { useGistAutoBackup } from '../hooks/useGistAutoBackup'
 import { useFolderAutoBackup } from '../hooks/useFolderAutoBackup'
 import { MessageSquare, PanelRight } from 'lucide-react'
 import StepHistoryButtons from '../components/agent/StepHistoryButtons'
+import CloudAccountButton from '../components/cloud/CloudAccountButton'
 import WorkspaceAgentRuntime from '../components/agent/WorkspaceAgentRuntime'
 import {
   clampDockHeight,
@@ -42,7 +43,7 @@ export type { CopilotPlacement } from '../lib/agent/copilot-layout'
 import Sidebar, { type SidebarModule } from '../components/layout/Sidebar'
 import ContentTypeBadge from '../components/layout/ContentTypeBadge'
 import { Button } from '../components/shared/Button'
-import { getModuleContentType } from '../components/layout/sidebar-tree'
+import { getModuleContentType, toSidebarModule } from '../components/layout/sidebar-tree'
 import PropertiesPanel from '../components/layout/PropertiesPanel'
 import ProjectInfoPanel from '../components/project/ProjectInfoPanel'
 // 旧「作品学习」面板已整合进 ReferencePanel（Phase 20，子系统于 v32 下线）
@@ -102,7 +103,12 @@ export default function WorkspacePage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const { loadProject, projects, currentProjectId } = useProjectStore()
-  const [activeModule, setActiveModule] = useState<SidebarModule>('info')
+  // `?module=export` 之类的深链（来自首页「设置区」菜单）。
+  // **必须校验**：地址栏是外部输入，非法值会让工作区落到空白面板。
+  const [searchParams] = useSearchParams()
+  const [activeModule, setActiveModule] = useState<SidebarModule>(
+    () => toSidebarModule(searchParams.get('module')) ?? 'info',
+  )
   const [loading, setLoading] = useState(true)
   const [editorNodeId, setEditorNodeId] = useState<number | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -373,7 +379,15 @@ export default function WorkspacePage() {
       {/* 左侧导航 */}
       <Sidebar
         active={activeModule}
-        onSelect={(m) => { setActiveModule(m); if (m !== 'editor') setEditorNodeId(null) }}
+        onSelect={(m) => {
+          setActiveModule(m)
+          if (m !== 'editor') setEditorNodeId(null)
+          // 手动切换模块后清掉 `?module=`，否则刷新会跳回深链指向的那个模块，
+          // 与用户"我刚点了编辑器"的预期不一致。
+          if (searchParams.get('module')) {
+            navigate(`/workspace/${projectId}`, { replace: true })
+          }
+        }}
         onBack={() => navigate('/')}
         projectName={project.name}
         collapsed={sidebarCollapsed}
@@ -430,6 +444,10 @@ export default function WorkspacePage() {
             >
               <PanelRight />
             </Button>
+            {/* 云数据库：未登录=登录入口，已登录=云端占用 + 在线状态 */}
+            <span className="ml-1 pl-1 border-l border-border/70 flex items-center">
+              <CloudAccountButton />
+            </span>
           </div>
         </div>
         <div className={`min-h-0 flex-1 overflow-y-auto ${isImmersiveModule ? '' : 'p-6'}`}>

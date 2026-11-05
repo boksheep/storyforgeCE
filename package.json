@@ -1,7 +1,7 @@
 {
   "name": "storyforgece",
   "private": true,
-  "version": "3.94.0-ce",
+  "version": "3.94.1-ce",
   "license": "MIT",
   "type": "module",
   "scripts": {

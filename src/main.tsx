@@ -166,3 +166,40 @@ async function bootstrap() {
 }
 
 bootstrap()
+
+/**
+ * CLOUD-DB-1 · 云端模块延迟加载。
+ *
+ * 只有「运维注入了 `window.__STORYFORGE_CLOUD__`」或「用户保存过云端配置」时才加载，
+ * 因此纯本地用户（绝大多数）在这里直接 return —— 不下载模块、不发任何请求、
+ * 首屏路径与今天逐字一致。
+ *
+ * 键名与 `src/lib/cloud/types.ts` 的 `CLOUD_CONFIG_STORAGE_KEY` 必须一致；
+ * 这里刻意写字面量以避免把云端模块拉进入口包，一致性由
+ * `tests/regression/R-cloud-1-local-mode-isolation.test.ts` 的源码断言兜住。
+ */
+function scheduleCloudBoot(): void {
+  let stored: string | null = null
+  try {
+    stored = globalThis.localStorage?.getItem('storyforge-cloud-config') ?? null
+  } catch {
+    stored = null
+  }
+  const injected = (globalThis as { __STORYFORGE_CLOUD__?: unknown }).__STORYFORGE_CLOUD__
+  if (!injected && !stored) return
+
+  const load = () => {
+    void import('./lib/cloud/boot')
+      .then(module => module.bootCloud())
+      // 云端任何失败都不得影响本地创作，静默降级。
+      .catch(() => undefined)
+  }
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(load, { timeout: 4_000 })
+  } else {
+    setTimeout(load, 2_000)
+  }
+}
+
+scheduleCloudBoot()

@@ -177,7 +177,7 @@ export function applyPush(db, input) {
     try {
       writeVersionFile(projectUid, rev, reason, snapshot)
       pruneVersions(db, projectUid)
-    } catch (error) {
+    } catch {
       log.error('sync.version.write_failed', { projectUid, rev, reason })
       db.prepare(
         'DELETE FROM project_versions WHERE project_uid = ? AND rev = ? AND reason = ?',

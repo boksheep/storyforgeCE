@@ -47,6 +47,7 @@ export const LOG_TAGS: readonly LogTagSpec[] = [
   // 数据与存储
   { tag: 'Codex', label: '设定词条', category: 'data' },
   { tag: 'CodexRefs', label: '词条引用重映射', category: 'data' },
+  { tag: 'Cloud', label: '云端同步', category: 'data' },
   { tag: 'OutlineStore', label: '大纲节点写库', category: 'data' },
   { tag: 'DetailedOutlineStore', label: '细纲写库', category: 'data' },
   { tag: 'WorldviewStore', label: '世界观写库', category: 'data' },

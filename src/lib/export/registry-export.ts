@@ -45,6 +45,8 @@ function toExportRow(
   const obj: any = { ...row }
   delete obj.id
   if ('projectId' in obj) delete obj.projectId
+  // 本机专有字段（如 projects.syncUid）永不进入便携格式
+  for (const field of spec.exportOmit ?? []) delete obj[field]
 
   for (const rm of spec.exportRemap ?? []) {
     const val = obj[rm.field]

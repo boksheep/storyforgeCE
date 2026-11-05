@@ -21,6 +21,8 @@ export const PROJECT_TABLES: TableSpec[] = [
       remapVia: 'characterDrivenPlans',
       exportAs: '_activeCharacterDrivenPlanExportId',
     }],
+    // CLOUD-DB-1：本机↔云端项目的映射标识，不属于作品内容，不得进入备份。
+    exportOmit: ['syncUid'],
     note: '项目本身' },
 
   // ───────────────────── 世界观/设定(world-scoped 多)─────────────────────

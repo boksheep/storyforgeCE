@@ -317,6 +317,34 @@ export const NAV_TREE: TreeSection[] = [
 
 // ── 工具 ─────────────────────────────────────────────────────────────
 
+/**
+ * 收集所有合法的 module id。
+ *
+ * 用途：URL 里带 `?module=xxx` 时**必须校验**再使用。直接把字符串塞进
+ * `activeModule` 会让工作区落到 `default: return null` 的空白面板，
+ * 而且类型系统拦不住（运行时值来自地址栏）。
+ */
+const MODULE_IDS: ReadonlySet<string> = (() => {
+  const ids = new Set<string>()
+  const collect = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      if (node.kind === 'leaf') ids.add(node.id)
+      else collect(node.children)
+    }
+  }
+  for (const section of NAV_TREE) {
+    if (section.rootLeaf) ids.add(section.rootLeaf.id)
+    if (section.children) collect(section.children)
+  }
+  return ids
+})()
+
+/** 把任意字符串安全地转成 `SidebarModule`；不认识就返回 `null`。 */
+export function toSidebarModule(value: string | null | undefined): SidebarModule | null {
+  if (!value) return null
+  return MODULE_IDS.has(value) ? (value as SidebarModule) : null
+}
+
 /** 找到包含某 module 的所有 branch 的 branchId 链（用于默认展开） */
 export function getBranchChain(target: SidebarModule): string[] {
   const chain: string[] = []

@@ -158,6 +158,14 @@ export interface TableSpec<T = any> {
   refs?: RefSpec[]
   /** 是否纳入 JSON 备份导出 */
   exportable: boolean
+  /**
+   * 导出时**必须剔除**的本机字段（不进入 `ProjectExportData`）。
+   *
+   * 用于"库里有、但不属于作品内容"的字段，例如 CLOUD-DB-1 的 `projects.syncUid`
+   * （本机与云端服务器的映射标识）。与 `exportRemap` 的区别：`exportRemap` 处理
+   * 外键→导出序号的转换，本字段是纯删除。
+   */
+  exportOmit?: string[]
   /** 导出时需要的 ID 重映射 */
   exportRemap?: ExportRemapField[]
   /**

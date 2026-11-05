@@ -91,6 +91,8 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const savedSelectionRef = useRef<{ from: number; to: number } | null>(null)
+  const isComposingRef = useRef(false)
+  const lastEditorHtmlRef = useRef<string | null>(null)
   const pendingTextStyleRef = useRef<PendingTextStyle>({})
   const [pendingTextStyle, setPendingTextStyle] = useState<PendingTextStyle>({})
   const [, setThemeRevision] = useState(0)
@@ -170,22 +172,27 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
           'tiptap-editor prose prose-invert max-w-none focus:outline-none px-4 py-3 text-text-primary text-sm leading-relaxed',
         spellcheck: 'false',
       },
-      handleTextInput: (view, from, to, text) => insertPendingStyledText(view, from, to, text),
+      handleTextInput: (view, from, to, text) => {
+        // IME composition must remain under ProseMirror's native transaction path.
+        // Intercepting beforeinput here can commit only the first romanized segment.
+        if (isComposingRef.current) return false
+        return insertPendingStyledText(view, from, to, text)
+      },
       handleDOMEvents: {
-        beforeinput: (view, event) => {
-          const inputEvent = event as InputEvent
-          if (inputEvent.inputType !== 'insertText' || !inputEvent.data) return false
-
-          const { from, to } = view.state.selection
-          const handled = insertPendingStyledText(view, from, to, inputEvent.data)
-          if (handled) event.preventDefault()
-          return handled
+        compositionstart: () => {
+          isComposingRef.current = true
+          return false
+        },
+        compositionend: () => {
+          isComposingRef.current = false
+          return false
         },
       },
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
       const plain = editor.getText()
+      lastEditorHtmlRef.current = html
       onChangeRef.current(html, plain)
       updateEntityMenu(editor)
     },
@@ -302,7 +309,14 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
     if (!editor || editor.isDestroyed) return
     const current = editor.getHTML()
     const incoming = normalizeThemeAdaptiveColorHtml(toHtml(value))
+    // Ignore value echoed from this editor's own update. Calling setContent for an
+    // equivalent controlled value can reset the ProseMirror selection to document end.
+    if (incoming === lastEditorHtmlRef.current) {
+      lastEditorHtmlRef.current = null
+      return
+    }
     if (incoming !== current) {
+      lastEditorHtmlRef.current = null
       editor.commands.setContent(incoming, { emitUpdate: false })
     }
   }, [value, editor])

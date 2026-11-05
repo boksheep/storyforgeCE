@@ -79,6 +79,14 @@ export type CreativeMode = 'fantasy' | 'historical'
 /** 项目 */
 export interface Project {
   id?: number
+  /**
+   * CLOUD-DB-1 · 设备无关的云端身份（UUID）。
+   *
+   * 本地主键是自增整数，跨设备必然冲突，所以云端用这个字段对齐"同一个项目"。
+   * **不参与导出**（`PROJECT_TABLES` 里 `exportOmit: ['syncUid']`）：
+   * 它是本机与服务器之间的映射，不是作品内容。
+   */
+  syncUid?: string
   name: string
   /** 兼容旧数据的单选流派（保留此字段避免旧代码报错，值始终有效） */
   genre: string

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { log } from '../logging/logger'
+import { installCaptureMiddleware } from '../cloud/capture-hook'
 import { migrateLegacyTablesToCodex } from '../migrations/legacy-to-codex-upgrade'
 import { migrateCharactersToAxes } from '../migrations/character-axes-upgrade'
 import { migrateStateCardsToTemporalFactCandidates } from '../migrations/state-cards-to-temporal-facts'
@@ -572,3 +573,16 @@ class StoryForgeDB extends Dexie {
 export const SCHEMA_VERSION = 54
 
 export const db = new StoryForgeDB()
+
+/**
+ * CLOUD-DB-1 · 云端写入捕获中间件。
+ *
+ * **必须在这里安装，不能挪到"登录成功后"**：Dexie 的中间件栈只在 `open()` / upgrade
+ * 时构建一次并写死到 `db.core` 与每个 `table.core`；`open()` 之后再 `db.use()`
+ * 只会改 `_middlewares` 数组、不会重建栈，于是中间件**静默失效且不报错**。
+ *
+ * 本模块零依赖，未启用云端时 `captureSlot.active === false`，
+ * 每次写入只多一次布尔判断，行为等价于没有中间件。
+ * 回归：`tests/regression/R-cloud-0-middleware-timing.test.ts`
+ */
+installCaptureMiddleware(db)

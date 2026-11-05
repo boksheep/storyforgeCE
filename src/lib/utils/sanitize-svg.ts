@@ -13,6 +13,24 @@ const DANGEROUS_TAGS = new Set([
   'animate', 'animatetransform', 'set', 'handler',
 ])
 
+/**
+ * 单个属性是否必须剔除。
+ *
+ * 根 `<svg>` 与任意子节点**必须走同一套判定**：早期实现只对子节点检查 `href`/`src`
+ * 协议，根节点仅清 `on*`，于是 `<svg href="javascript:...">` 能穿过清洗
+ * （见 `docs/IP-BACKUP-DESIGN.md` §8.2 与 `R-IP1-svg-root`）。
+ */
+function shouldStripAttribute(attr: Attr): boolean {
+  const name = attr.name.toLowerCase()
+  if (name.startsWith('on')) return true
+  if (name === 'href' || name === 'xlink:href' || name === 'src') {
+    const value = attr.value.replace(/\s+/g, '').toLowerCase()
+    return value.startsWith('javascript:') || value.startsWith('data:text/html')
+  }
+  if (name === 'style') return /expression\(|javascript:/i.test(attr.value)
+  return false
+}
+
 /** 清洗 SVG 字符串，移除脚本/事件/危险协议。失败时返回空串（不渲染）。 */
 export function sanitizeSvg(raw: string): string {
   if (!raw || !raw.trim()) return ''
@@ -32,23 +50,14 @@ export function sanitizeSvg(raw: string): string {
         }
         // 2. 移除事件处理属性 + 危险协议的 href/src
         for (const attr of Array.from(child.attributes)) {
-          const name = attr.name.toLowerCase()
-          const value = attr.value.replace(/\s+/g, '').toLowerCase()
-          if (name.startsWith('on')) {
-            child.removeAttribute(attr.name)
-          } else if ((name === 'href' || name === 'xlink:href' || name === 'src') &&
-                     (value.startsWith('javascript:') || value.startsWith('data:text/html'))) {
-            child.removeAttribute(attr.name)
-          } else if (name === 'style' && /expression\(|javascript:/i.test(attr.value)) {
-            child.removeAttribute(attr.name)
-          }
+          if (shouldStripAttribute(attr)) child.removeAttribute(attr.name)
         }
         walk(child)
       }
     }
-    // 根节点自身的事件属性也清掉
+    // 根节点与子节点同一套判定（不能只清 on*）
     for (const attr of Array.from(svg.attributes)) {
-      if (attr.name.toLowerCase().startsWith('on')) svg.removeAttribute(attr.name)
+      if (shouldStripAttribute(attr)) svg.removeAttribute(attr.name)
     }
     walk(svg)
 

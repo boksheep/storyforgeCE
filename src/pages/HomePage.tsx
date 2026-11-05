@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Flame, Github, X, ChevronDown, ChevronRight, FolderOpen, Settings } from 'lucide-react'
+import { Flame, Github, X, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react'
 import { useProjectStore } from '../stores/project'
 import WelcomeGuide from '../components/guide/WelcomeGuide'
 import { Button } from '../components/shared/Button'
+import SettingsAreaMenu, { type SettingsAreaProject } from '../components/layout/SettingsAreaMenu'
+import CloudAccountButton from '../components/cloud/CloudAccountButton'
 import {
   isFSASupported, pickFolder, ensureFolderPermission, readStoryforgeBackups,
 } from '../lib/storage/folder-backup'
@@ -133,6 +135,11 @@ export default function HomePage() {
 
   const totalWords = projects.reduce((sum, p) => sum + (p.currentWordCount ?? 0), 0)
 
+  // 设置区菜单里"项目类"入口需要一个真实项目；过滤掉还没拿到 id 的行（加载中）
+  const settingsAreaProjects: SettingsAreaProject[] = projects
+    .filter((p): p is typeof p & { id: number } => typeof p.id === 'number')
+    .map(p => ({ id: p.id, name: p.name, updatedAt: p.updatedAt }))
+
   return (
     <div className="min-h-screen bg-bg-base" onClick={() => setDeleteConfirm(null)}>
       {/* 新手引导 */}
@@ -169,27 +176,27 @@ export default function HomePage() {
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="md"
-          iconOnly
-          onClick={() => navigate('/settings')}
-          title="打开全局设置"
-          aria-label="打开全局设置"
-          className="ml-auto"
-        >
-          <Settings />
-        </Button>
+        {/* 右侧操作区：统一一个 ml-auto 容器。
+            之前齿轮和 GitHub 各带一个 ml-auto，两个 auto margin 会平分剩余空间，
+            结果齿轮被推到中间、和 GitHub 之间留出一大段空白。 */}
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          {/* 设置区：四项并列（设置 / 数据管理 / 版本历史 / 消耗统计） */}
+          <SettingsAreaMenu projects={settingsAreaProjects} />
 
-        <a
-          href="https://github.com/yuanbw2025/storyforge"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-lg hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors ml-auto"
-          title="GitHub"
-        >
-          <Github className="w-4 h-4" />
-        </a>
+          <a
+            href="https://github.com/boksheep/storyforgeCE"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 rounded-lg hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors"
+            title="GitHub 仓库"
+            aria-label="GitHub 仓库"
+          >
+            <Github className="w-4 h-4" />
+          </a>
+
+          {/* 最右上角：未登录=登录入口，已登录=云端占用 + 在线状态 */}
+          <CloudAccountButton />
+        </div>
       </header>
 
       {/* ── 主体 ──────────────────────────────────────── */}

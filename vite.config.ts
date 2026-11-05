@@ -28,11 +28,19 @@ function escapeRegExp(value: string): string {
 }
 
 /**
- * workbox 导航回退黑名单：只对落在应用基路径下的导航回退到 index.html。
- * 根路径部署时没有需要排除的前缀，返回空数组（否则会把所有导航都挡掉）。
+ * workbox 导航回退黑名单。
+ *
+ * 两条规则：
+ *  1. `/api` 前缀**无条件**排除。CLOUD-DB-1 引入同源 API 后，若把 `/api/...` 当成
+ *     导航请求回退到 `index.html`，服务端接口会被前端页面静默顶替。
+ *     注意：根路径部署（`dist-web`，base=`/`）时下面的基路径规则返回空数组，
+ *     所以这条不能省。
+ *  2. 基路径之外的导航也不回退（子路径部署时）。
  */
 function buildNavigateFallbackDenylist(): RegExp[] {
-  return baseSegment ? [new RegExp(`^/(?!${escapeRegExp(baseSegment)})`)] : []
+  const denylist: RegExp[] = [new RegExp('^/api(/|$)')]
+  if (baseSegment) denylist.push(new RegExp(`^/(?!${escapeRegExp(baseSegment)})`))
+  return denylist
 }
 
 interface ProxyRoute { prefix: string; target: string; rewriteTo?: string }

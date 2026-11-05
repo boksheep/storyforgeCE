@@ -41,3 +41,13 @@ log/
 
 # 本仓库以 npm 为唯一包管理器（package-lock.json 入库），pnpm 锁文件是误生成产物
 pnpm-lock.yaml
+
+# CLOUD-DB-1：云数据库服务的运行数据（SQLite / 版本快照 / 备份），不入库
+server/data/
+# 兜底：即使有人把库文件放在别处（--out / SF_DB_FILE 自定义），也别让它进仓库。
+# 这类文件里有账号哈希与全部手稿明文，误提交等于公开自己的书稿。
+server/*.db
+server/*.db-wal
+server/*.db-shm
+# 本地配置（可能写了真实域名、端口、内网地址）。模板是 server/.env.example。
+server/.env

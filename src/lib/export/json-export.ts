@@ -12,7 +12,7 @@
  *   R-export-legacy-fixture(派生导入真实旧格式 fixture)
  */
 import { deriveExportProjectJSON } from './registry-export'
-import { deriveImportProjectJSON } from './registry-import'
+import { deriveImportProjectJSON, type ImportProjectOptions } from './registry-import'
 import type {
   Project, Worldview, StoryCore, PowerSystem,
   Character, OutlineNode, Chapter,
@@ -72,7 +72,7 @@ type HomeWorldGroupExportRef = {
 export interface ProjectExportData {
   version: number
   exportedAt: number
-  project: Omit<Project, 'id' | 'activeCharacterDrivenPlanId'> & {
+  project: Omit<Project, 'id' | 'activeCharacterDrivenPlanId' | 'syncUid'> & {
     _activeCharacterDrivenPlanExportId?: number | null
   }
 
@@ -215,6 +215,9 @@ export function downloadJSON(data: ProjectExportData, filename: string) {
 }
 
 /** 导入项目 JSON — 返回新项目 ID（注册表派生，兼容 v1/v2/v3 旧格式） */
-export async function importProjectJSON(data: ProjectExportData): Promise<number> {
-  return deriveImportProjectJSON(data)
+export async function importProjectJSON(
+  data: ProjectExportData,
+  options: ImportProjectOptions = {},
+): Promise<number> {
+  return deriveImportProjectJSON(data, options)
 }

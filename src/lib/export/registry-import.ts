@@ -230,7 +230,27 @@ async function validateImportedMap(projectId: number, multiWorld: boolean): Prom
  * 派生导入:把 ProjectExportData 写成一个新项目,返回新项目 id。
  * 与手写 importProjectJSON 行为一致(往返完整性由 R-export-fullcoverage 锁死)。
  */
-export async function deriveImportProjectJSON(data: ProjectExportData): Promise<number> {
+export interface ImportProjectOptions {
+  /**
+   * 覆盖项目名（**不含**「（导入）」后缀，本函数会自己加）。
+   *
+   * 用途：CLOUD-DB-1 拉取时反复导入，若不先剥掉旧后缀会得到
+   * 「书（导入）（导入）」。调用方传干净名字即可保持稳定。
+   */
+  name?: string
+  /**
+   * 在**同一事务内**写入云端身份（`projects.syncUid`）。
+   *
+   * 必须放进事务：若事务提交后再单独绑定，绑定失败会留下一个
+   * "永不属于任何云端项目"的孤儿副本，下次拉取再复制一份。
+   */
+  syncUid?: string
+}
+
+export async function deriveImportProjectJSON(
+  data: ProjectExportData,
+  options: ImportProjectOptions = {},
+): Promise<number> {
   if (!data.version || !data.project) throw new Error('无效的导出文件格式')
   // Decode and verify before opening the Dexie transaction. A missing or tampered image
   // rejects the whole import, and crypto promises cannot expire a live Dexie transaction.
@@ -279,7 +299,9 @@ export async function deriveImportProjectJSON(data: ProjectExportData): Promise<
     }
     const newProjectId = await db.projects.add({
       ...projectData,
-      name: `${data.project.name}（导入）`,
+      name: `${options.name ?? data.project.name}（导入）`,
+      // 云端身份必须在同一事务内落库（见 ImportProjectOptions.syncUid）
+      ...(options.syncUid ? { syncUid: options.syncUid } : {}),
       createdAt: now,
       updatedAt: now,
     } as any) as number

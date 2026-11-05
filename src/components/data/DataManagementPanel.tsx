@@ -4,6 +4,7 @@ import {
   Loader2, CheckCircle, AlertCircle, FolderOpen, X,
   History, Plus, Trash2, RotateCcw, HardDrive,
   ShieldAlert, Stethoscope, ScrollText,
+  Cloud, CloudUpload, CloudDownload, RefreshCw,
 } from 'lucide-react'
 import { exportProjectJSON, downloadJSON, importProjectJSON, type ProjectExportData } from '../../lib/export/json-export'
 import { downloadIndexedDBSnapshot, exportIndexedDBSnapshot, importIndexedDBSnapshot, parseIndexedDBSnapshot } from '../../lib/export/db-snapshot'
@@ -15,7 +16,9 @@ import {
 } from '../../lib/storage/folder-backup'
 import { saveFolderHandle, loadFolderHandle, clearFolderHandle, projFolderKey, LAST_FOLDER_KEY } from '../../lib/storage/folder-handle-store'
 import { useBackupStore } from '../../stores/backup'
+import { useCloudAuth } from '../../stores/cloud-auth'
 import CloudBackupCard from './CloudBackupCard'
+import CloudDatabaseCard from './CloudDatabaseCard'
 import LogStatusCard from './LogStatusCard'
 import ContextMemoCard from './ContextMemoCard'
 import { useToast } from '../shared/Toast'
@@ -298,7 +301,9 @@ function ExportTab({ project, onImported }: Props) {
          </div>
        </SectionCard>
 
-       <CloudBackupCard projectId={project.id!} onImported={onImported} />
+       <CloudDatabaseCard projectId={project.id!} onImported={onImported} />
+
+      <CloudBackupCard projectId={project.id!} onImported={onImported} />
 
       {/* Markdown */}
       <SectionCard
@@ -403,23 +408,46 @@ function ExportTab({ project, onImported }: Props) {
 }
 
 // ── 版本历史 Tab ─────────────────────────────────────────────
-function BackupTab({ project }: Props) {
-  const { snapshots, loading, loadSnapshots, createSnapshot, deleteSnapshot, restoreSnapshot } = useBackupStore()
+function BackupTab({ project, onImported }: Props) {
+  const {
+    snapshots, loading, loadSnapshots, createSnapshot, deleteSnapshot, restoreSnapshot,
+    cloudSnapshots, cloudLoading, cloudError,
+    uploadSnapshotToCloud, loadCloudSnapshots, restoreCloudSnapshot, deleteCloudSnapshot,
+  } = useBackupStore()
+  const cloudAuth = useCloudAuth()
+  /** 只有"已启用且已登录"才显示云端相关操作，避免给出必然失败的按钮 */
+  const cloudReady = cloudAuth.enabled && cloudAuth.status === 'authed'
+
   const toast = useToast()
   const dialog = useDialog()
   const [creating, setCreating] = useState(false)
   const [restoring, setRestoring] = useState<number | null>(null)
+  const [restoringCloud, setRestoringCloud] = useState<string | null>(null)
+  const [uploading, setUploading] = useState<number | null>(null)
   const [label, setLabel] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [uploadOnCreate, setUploadOnCreate] = useState(true)
 
-  useState(() => { loadSnapshots(project.id!) })
+  useEffect(() => {
+    void loadSnapshots(project.id!)
+  }, [project.id, loadSnapshots])
+
+  useEffect(() => {
+    if (cloudReady) void loadCloudSnapshots(project.id!)
+  }, [project.id, cloudReady, loadCloudSnapshots])
 
   const handleCreate = async () => {
     setCreating(true)
     try {
-      await createSnapshot(project.id!, label.trim() || `手动备份 ${new Date().toLocaleString('zh-CN')}`, 'manual')
-      toast.success('快照创建成功')
+      await createSnapshot(
+        project.id!,
+        label.trim() || `手动备份 ${new Date().toLocaleString('zh-CN')}`,
+        'manual',
+        { uploadToCloud: cloudReady && uploadOnCreate },
+      )
+      toast.success(cloudReady && uploadOnCreate ? '快照已创建并上传云端' : '快照创建成功')
       setLabel(''); setShowForm(false)
+      if (cloudReady) await loadCloudSnapshots(project.id!)
     } catch (err) {
       toast.error('快照创建失败: ' + (err as Error).message)
     } finally { setCreating(false) }
@@ -440,6 +468,51 @@ function BackupTab({ project }: Props) {
     finally { setRestoring(null) }
   }
 
+  const handleUploadToCloud = async (snap: Snapshot) => {
+    setUploading(snap.id!)
+    try {
+      await uploadSnapshotToCloud(snap.id!)
+      toast.success('已上传到云数据库')
+      await loadCloudSnapshots(project.id!)
+    } catch (err) {
+      toast.error('上传失败: ' + (err as Error).message)
+    } finally { setUploading(null) }
+  }
+
+  const handleRestoreCloud = async (snapshotUid: string, cloudLabel: string) => {
+    const ok = await dialog.confirm({
+      title: `从云端快照「${cloudLabel}」恢复？`,
+      message: '将创建一个新项目，不会覆盖当前项目。',
+      confirmText: '恢复为新项目',
+    })
+    if (!ok) return
+    setRestoringCloud(snapshotUid)
+    try {
+      const newId = await restoreCloudSnapshot(snapshotUid)
+      toast.success('已从云端恢复，创建了新项目')
+      onImported?.(newId)
+    } catch (err) { toast.error('恢复失败: ' + (err as Error).message) }
+    finally { setRestoringCloud(null) }
+  }
+
+  const handleDeleteCloud = async (snapshotUid: string, cloudLabel: string) => {
+    const ok = await dialog.confirm({
+      title: `删除云端快照「${cloudLabel}」？`,
+      message: '只删除云端那一份，本地快照与项目内容不受影响。',
+      confirmText: '删除云端快照',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      await deleteCloudSnapshot(snapshotUid)
+      toast.success('云端快照已删除')
+    } catch (err) { toast.error('删除失败: ' + (err as Error).message) }
+  }
+
+  const localCloudUids = new Set(
+    snapshots.map(snap => snap.cloudSnapshotUid).filter((uid): uid is string => Boolean(uid)),
+  )
+
   return (
     <div className="space-y-4">
       {/* 新建快照 */}
@@ -458,28 +531,41 @@ function BackupTab({ project }: Props) {
           </Button>
         </div>
         {showForm && (
-          <div className="flex gap-2">
-            <input
-              value={label}
-              onChange={e => setLabel(e.target.value)}
-              placeholder="快照备注（可选）"
-              className="flex-1 px-3 py-1.5 bg-bg-base border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent"
-            />
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleCreate}
-              loading={creating}
-              loadingText="创建中…"
-              icon={<Plus />}
-            >
-              创建
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+                placeholder="快照备注（可选）"
+                className="flex-1 px-3 py-1.5 bg-bg-base border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent"
+              />
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handleCreate}
+                loading={creating}
+                loadingText="创建中…"
+                icon={<Plus />}
+              >
+                创建
+              </Button>
+            </div>
+            {cloudReady && (
+              <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={uploadOnCreate}
+                  onChange={e => setUploadOnCreate(e.target.checked)}
+                  className="accent-sky-400"
+                />
+                同时上传到云数据库（换设备也能恢复）
+              </label>
+            )}
           </div>
         )}
       </div>
 
-      {/* 快照列表 */}
+      {/* 本地快照列表 */}
       <div className="space-y-2">
         {loading && (
           <div className="flex items-center justify-center py-8 text-text-muted">
@@ -492,38 +578,156 @@ function BackupTab({ project }: Props) {
             暂无快照，创建第一个吧
           </div>
         )}
-        {snapshots.map(snap => (
-          <div key={snap.id} className="bg-bg-surface border border-border rounded-lg p-3 flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">{snap.label}</p>
-              <p className="text-xs text-text-muted">{new Date(snap.createdAt).toLocaleString('zh-CN')}</p>
+        {snapshots.map(snap => {
+          const inCloud = Boolean(snap.cloudSnapshotUid)
+          return (
+            <div key={snap.id} className="bg-bg-surface border border-border rounded-lg p-3 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-text-primary truncate">{snap.label}</p>
+                  {inCloud && (
+                    <span
+                      className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0"
+                      title={snap.cloudUploadedAt
+                        ? `已存到云数据库（${new Date(snap.cloudUploadedAt).toLocaleString('zh-CN')}）`
+                        : '已存到云数据库'}
+                    >
+                      <Cloud className="w-3 h-3" />
+                      云端
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-text-muted">
+                  {new Date(snap.createdAt).toLocaleString('zh-CN')}
+                  {' · '}
+                  {(snap.size / 1024).toFixed(0)} KB
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {cloudReady && !inCloud && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    onClick={() => handleUploadToCloud(snap)}
+                    loading={uploading === snap.id}
+                    title="上传到云数据库"
+                    aria-label="上传到云数据库"
+                  >
+                    <CloudUpload />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  onClick={() => handleRestore(snap)}
+                  loading={restoring === snap.id}
+                  title="从此快照恢复"
+                  aria-label="从此快照恢复"
+                >
+                  <RotateCcw />
+                </Button>
+                <Button
+                  variant="danger-soft"
+                  size="sm"
+                  iconOnly
+                  onClick={() => deleteSnapshot(snap.id!)}
+                  title="删除快照"
+                  aria-label="删除快照"
+                >
+                  <Trash2 />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
-                onClick={() => handleRestore(snap)}
-                loading={restoring === snap.id}
-                title="从此快照恢复"
-                aria-label="从此快照恢复"
-              >
-                <RotateCcw />
-              </Button>
-              <Button
-                variant="danger-soft"
-                size="sm"
-                iconOnly
-                onClick={() => deleteSnapshot(snap.id!)}
-                title="删除快照"
-                aria-label="删除快照"
-              >
-                <Trash2 />
-              </Button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
+
+      {/* 云端快照列表 */}
+      {cloudReady && (
+        <div className="bg-bg-surface border border-border rounded-lg p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-text-primary">云数据库中的快照</span>
+              {cloudSnapshots.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-base border border-border text-text-secondary">
+                  {cloudSnapshots.length}
+                </span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => loadCloudSnapshots(project.id!)}
+              loading={cloudLoading}
+            >
+              <RefreshCw className="w-3 h-3" />
+              刷新
+            </Button>
+          </div>
+
+          {cloudError && <p className="text-xs text-red-500">{cloudError}</p>}
+
+          {!cloudLoading && !cloudError && cloudSnapshots.length === 0 && (
+            <p className="text-xs text-text-muted py-3">
+              云端还没有这个项目的快照。创建快照时勾选「同时上传」，或点上方列表里的上传按钮。
+            </p>
+          )}
+
+          {cloudSnapshots.map(meta => (
+            <div
+              key={meta.snapshotUid}
+              className="flex items-center gap-3 border border-border rounded p-2.5 bg-bg-base"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm text-text-primary truncate">{meta.label}</p>
+                  {localCloudUids.has(meta.snapshotUid) && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted shrink-0">
+                      本机也有
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-text-muted">
+                  {new Date(meta.createdAt).toLocaleString('zh-CN')}
+                  {' · '}
+                  {(meta.sizeBytes / 1024).toFixed(0)} KB
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  onClick={() => handleRestoreCloud(meta.snapshotUid, meta.label)}
+                  loading={restoringCloud === meta.snapshotUid}
+                  title="从云端恢复为新项目"
+                  aria-label="从云端恢复为新项目"
+                >
+                  <CloudDownload />
+                </Button>
+                <Button
+                  variant="danger-soft"
+                  size="sm"
+                  iconOnly
+                  onClick={() => handleDeleteCloud(meta.snapshotUid, meta.label)}
+                  title="删除云端快照"
+                  aria-label="删除云端快照"
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          <p className="text-[11px] text-text-muted pt-1 leading-relaxed">
+            云端快照是<strong className="text-text-secondary">独立上传</strong>的，不随项目自动同步；
+            删除云端不影响本地，删除本地也不会连带删除云端。
+          </p>
+        </div>
+      )}
     </div>
   )
 }
